@@ -50,18 +50,30 @@ export function ShopRow({
     <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
       <View style={styles.rowCenter}>
         <View style={[styles.row, { gap: rowGap, width: rowWidth }]}>
-          <Image
-            source={LEFT_SHOP_DECOR}
-            resizeMode="contain"
+          <View
+            pointerEvents="none"
             style={[
-              styles.shopDecor,
+              styles.shopDecorClip,
               {
-                width: decorSize,
+                width: Math.round(decorSize * 0.58),
                 height: decorSize,
                 left: -decorLeftOffset,
               },
             ]}
-          />
+          >
+            <Image
+              source={LEFT_SHOP_DECOR}
+              resizeMode="contain"
+              style={[
+                styles.shopDecor,
+                {
+                  width: decorSize,
+                  height: decorSize,
+                  transform: [{ translateX: -Math.round(decorSize * 0.2) }],
+                },
+              ]}
+            />
+          </View>
           {visibleShop.map((slot, index) => (
             <DraggableShopSlot
               key={slot.slotId}
@@ -196,9 +208,13 @@ const styles = StyleSheet.create({
   },
   shopDecor: {
     position: "absolute",
+    bottom: 0,
+  },
+  shopDecorClip: {
+    position: "absolute",
     bottom: -50,
     zIndex: 1,
-    pointerEvents: "none",
+    overflow: "hidden",
   },
   slot: {
     zIndex: 2,
