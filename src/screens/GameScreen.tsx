@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import { ImageBackground, StyleSheet, useWindowDimensions, View } from "react-native";
+import { Image, ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { ViewStyle } from "react-native";
 
 import { ActionBar } from "../components/game/ActionBar";
+import { BattleView } from "../components/game/BattleView";
 import { InfoPanel } from "../components/game/InfoPanel";
 import { ShopRow } from "../components/game/ShopRow";
 import { TeamBoard } from "../components/game/TeamBoard";
 import { TopBar } from "../components/game/TopBar";
+import type { TopBarStatKey } from "../components/game/TopBar";
 import { UnitCard } from "../components/game/UnitCard";
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../constants/heroLayoutConfig";
 import type { ShopSlot, UnitInstance } from "../domain/types";
@@ -14,6 +16,7 @@ import { useGameStore } from "../stores/gameStore";
 
 const EMPTY_BATTLE_SUMMARY = "Боя еще не было. Собери стартовый отряд и проверь темп.";
 const BATTLEFIELD_BACKGROUND = require("../../assets/backgrounds/20260429_191654.jpeg");
+const LEFT_SHOP_DECOR = require("../../assets/f76bb0f8-d20d-4414-87f8-702c77d2b428.png");
 
 interface SlotRect {
   x: number;
@@ -26,10 +29,10 @@ export function GameScreen() {
   const { width, height } = useWindowDimensions();
   const state = useGameStore();
   const selectedTeam = state.team.find((unit) => unit?.instanceId === state.selectedId) ?? null;
-  const selectedShop = state.shop.find((slot) => slot.slotId === state.selectedId) ?? null;
+  const selectedShop = state.shop.find((slot) => slot.slotId === state.selectedId && slot.unit) ?? null;
   const selected = selectedTeam ?? selectedShop;
   const selectedIndex = state.team.findIndex((unit) => unit?.instanceId === state.selectedId);
-  const selectedShopIndex = state.shop.findIndex((slot) => slot.slotId === state.selectedId);
+  const selectedShopIndex = state.shop.findIndex((slot) => slot.slotId === state.selectedId && slot.unit);
   const canFreeze = selectedShopIndex >= 0;
   const showPlacementHints = selectedShopIndex >= 0;
   const [slotRects, setSlotRects] = useState<Record<number, SlotRect>>({});
@@ -40,6 +43,7 @@ export function GameScreen() {
     x: number;
     y: number;
   } | null>(null);
+  const [topBarHint, setTopBarHint] = useState<TopBarStatKey | null>(null);
 
   const profileKey = getHeroViewportProfile(width, height);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
@@ -154,6 +158,33 @@ export function GameScreen() {
     setDragState(null);
   };
 
+  const hintContent: Record<TopBarStatKey, { title: string; text: string }> = {
+    gold: {
+      title: "Золото",
+      text: "Тратится на действия в магазине: покупка юнита стоит 3, реролл стоит 1. В начале каждого хода золото обновляется.",
+    },
+    lives: {
+      title: "Жизни",
+      text: "Это запас поражений. Проиграл бой — теряешь 1 жизнь. Когда жизни заканчиваются, забег проигран.",
+    },
+    turn: {
+      title: "Ход",
+      text: "Номер текущего раунда. С ростом хода открываются более сильные тиры юнитов в магазине.",
+    },
+    wins: {
+      title: "Победы",
+      text: "Сколько боёв ты выиграл в этом забеге. Цель MVP-режима — дойти до 10 побед.",
+    },
+    tier: {
+      title: "Тир магазина",
+      text: "Максимальный тир юнитов, который может появиться в магазине на текущем ходу.",
+    },
+  };
+
+  if (state.phase === "battle" && state.battlePlayback) {
+    return <BattleView playback={state.battlePlayback} onComplete={state.finishBattle} />;
+  }
+
   return (
     <ImageBackground source={BATTLEFIELD_BACKGROUND} resizeMode="cover" style={styles.screen} imageStyle={styles.bgImage}>
       <View style={[styles.overlay, compact && styles.overlayCompact]} />
@@ -166,8 +197,18 @@ export function GameScreen() {
           turn={state.turn}
           tier={state.shopTier}
           compact={compact}
+          onStatPress={setTopBarHint}
         />
       </View>
+
+      {topBarHint ? (
+        <Pressable style={styles.hintBackdrop} onPress={() => setTopBarHint(null)}>
+          <Pressable style={[styles.hintCard, compact && styles.hintCardCompact]} onPress={() => undefined}>
+            <Text style={[styles.hintTitle, compact && styles.hintTitleCompact]}>{hintContent[topBarHint].title}</Text>
+            <Text style={[styles.hintText, compact && styles.hintTextCompact]}>{hintContent[topBarHint].text}</Text>
+          </Pressable>
+        </Pressable>
+      ) : null}
 
       <InfoPanel
         selected={selected}
@@ -217,6 +258,12 @@ export function GameScreen() {
           onTouchDragEnd={handleTouchDragEnd}
         />
       </View>
+
+      <Image
+        source={LEFT_SHOP_DECOR}
+        style={[styles.leftShopDecor, compact && styles.leftShopDecorCompact]}
+        resizeMode="contain"
+      />
 
       <View style={[styles.actionBarWrap, compact && styles.actionBarWrapCompact, ultraCompact && styles.actionBarWrapUltraCompact]}>
         <ActionBar
@@ -291,6 +338,53 @@ const styles = StyleSheet.create({
     top: "1.8%",
     left: "1.3%",
   },
+  hintBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8, 10, 16, 0.42)",
+    justifyContent: "flex-start",
+    alignItems: "flex-start",
+    zIndex: 25,
+  },
+  hintCard: {
+    marginTop: "10%",
+    marginLeft: "2%",
+    width: 340,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: "#16110b",
+    backgroundColor: "#fff9ef",
+    gap: 6,
+  },
+  hintCardCompact: {
+    marginTop: "11%",
+    width: 278,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 11,
+    borderWidth: 2,
+    gap: 4,
+  },
+  hintTitle: {
+    color: "#da5d14",
+    fontSize: 19,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+  hintTitleCompact: {
+    fontSize: 14,
+  },
+  hintText: {
+    color: "#21170f",
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  hintTextCompact: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
   infoPanelResponsive: {
     top: "3.1%",
     right: "1.8%",
@@ -318,6 +412,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     justifyContent: "center",
     zIndex: 3,
+  },
+  leftShopDecor: {
+    position: "absolute",
+    left: "9.1%",
+    top: "56.8%",
+    width: 305,
+    height: 305,
+    zIndex: 3,
+    pointerEvents: "none",
+  },
+  leftShopDecorCompact: {
+    left: "0%",
+    top: "30%",
+    width: 260,
+    height: 260,
   },
   actionBarWrap: {
     position: "absolute",

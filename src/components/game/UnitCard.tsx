@@ -14,6 +14,7 @@ import {
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
+import { SpriteIcon } from "../ui/SpriteIcon";
 
 const webInteractiveStyle =
   Platform.OS === "web"
@@ -214,28 +215,24 @@ function StatsRow({
 }) {
   return (
     <View style={[styles.statsRow, { marginTop: config.marginTop, gap: config.gap }]}>
-      <StatBadge label="ATK" value={attack} color="#17120f" compact={compact} />
-      <StatBadge label="HP" value={health} color="#a82f29" compact={compact} />
+      <StatBadge icon="attack" value={attack} compact={compact} />
+      <StatBadge icon="health" value={health} compact={compact} />
     </View>
   );
 }
 
 function StatBadge({
-  label,
+  icon,
   value,
-  color,
   compact,
 }: {
-  label: string;
+  icon: "attack" | "health";
   value: number;
-  color: string;
   compact?: boolean;
 }) {
   return (
     <View style={[styles.statBadge, compact && styles.statBadgeCompact]}>
-      <View style={[styles.statPill, compact && styles.statPillCompact, { backgroundColor: color }]}>
-        <Text style={[styles.statLabel, compact && styles.statLabelCompact]}>{label}</Text>
-      </View>
+      <SpriteIcon icon={icon} size={compact ? 26 : 34} trim={1} />
       <Text style={[styles.statValue, compact && styles.statValueCompact]}>{value}</Text>
     </View>
   );
@@ -459,44 +456,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statBadge: {
-    flexDirection: "row",
+    width: 34,
+    height: 34,
     alignItems: "center",
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#17120f",
-    backgroundColor: "#fff7df",
-    overflow: "hidden",
+    justifyContent: "center",
+    position: "relative",
   },
   statBadgeCompact: {
-    borderRadius: 10,
-  },
-  statPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  statPillCompact: {
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  statLabel: {
-    color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  statLabelCompact: {
-    fontSize: 7,
+    width: 26,
+    height: 26,
   },
   statValue: {
-    minWidth: 18,
-    paddingHorizontal: 5,
-    color: "#17120f",
-    fontSize: 11,
+    position: "absolute",
+    color: "#ffffff",
+    fontSize: 12,
     fontWeight: "900",
     textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.72)",
+    textShadowRadius: 3,
+    textShadowOffset: { width: 0, height: 1 },
   },
   statValueCompact: {
-    minWidth: 14,
-    paddingHorizontal: 3,
-    fontSize: 9,
+    fontSize: 10,
   },
 });

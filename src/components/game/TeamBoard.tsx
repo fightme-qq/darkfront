@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { PanResponder, StyleSheet, View } from "react-native";
+import { PanResponder, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { UnitInstance } from "../../domain/types";
@@ -46,9 +46,19 @@ export function TeamBoard({
   onTeamDragEnd,
 }: TeamBoardProps) {
   const slotRefs = useRef<Array<View | null>>([]);
+  const { width } = useWindowDimensions();
   const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
   const rowGap = profile.spacing.teamGap;
+  const maxTokenWidth = profile.tokens.team.width;
+  const responsiveTokenWidth = Math.max(
+    62,
+    Math.min(maxTokenWidth, Math.floor((width * 0.58 - rowGap * (team.length - 1)) / team.length)),
+  );
+  const responsiveTokenHeight = Math.max(
+    76,
+    Math.floor((responsiveTokenWidth / Math.max(1, maxTokenWidth)) * profile.tokens.team.minHeight),
+  );
 
   const measureSlot = (index: number) => {
     const node = slotRefs.current[index];
@@ -94,6 +104,8 @@ export function TeamBoard({
           onTeamDragStart={onTeamDragStart}
           onTeamDragMove={onTeamDragMove}
           onTeamDragEnd={onTeamDragEnd}
+          tokenWidth={responsiveTokenWidth}
+          tokenHeight={responsiveTokenHeight}
         />
       ))}
     </View>
@@ -115,6 +127,8 @@ interface TeamSlotProps {
   onTeamDragStart?: (teamIndex: number, x: number, y: number) => void;
   onTeamDragMove?: (x: number, y: number) => void;
   onTeamDragEnd?: (teamIndex: number, x: number, y: number) => void;
+  tokenWidth: number;
+  tokenHeight: number;
 }
 
 function TeamSlot({
@@ -132,11 +146,11 @@ function TeamSlot({
   onTeamDragStart,
   onTeamDragMove,
   onTeamDragEnd,
+  tokenWidth,
+  tokenHeight,
 }: TeamSlotProps) {
   const draggingRef = useRef(false);
   const grantPointRef = useRef({ x: 0, y: 0 });
-  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
-  const tokenConfig = HERO_LAYOUT_CONFIG.profiles[profileKey].tokens.team;
 
   const panResponder = useMemo(
     () =>
@@ -190,8 +204,8 @@ function TeamSlot({
       style={[
         styles.slotFrame,
         {
-          width: tokenConfig.width,
-          minHeight: tokenConfig.minHeight,
+          width: tokenWidth,
+          minHeight: tokenHeight,
         },
       ]}
       {...(unit ? panResponder.panHandlers : {})}

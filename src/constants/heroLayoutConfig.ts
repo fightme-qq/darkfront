@@ -215,14 +215,14 @@ export const HERO_LAYOUT_CONFIG = {
       tierOffsetY: 8,
     },
     "bone-wanderer": {
-      scale: 0.9,
+      scale: 0.8,
       offsetX: 0,
       offsetY: 8,
       tierOffsetX: -10,
       tierOffsetY: 4,
     },
     "dusk-swordsman": {
-      scale: 0.88,
+      scale: 1.4,
       offsetX: 0,
       offsetY: 6,
       tierOffsetX: -8,

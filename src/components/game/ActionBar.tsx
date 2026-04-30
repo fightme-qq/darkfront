@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { SpriteIcon } from "../ui/SpriteIcon";
+
 interface ActionBarProps {
   onRoll: () => void;
   onFreeze: () => void;
@@ -12,16 +14,25 @@ export function ActionBar({ onRoll, onFreeze, onBattle, canFreeze, compact }: Ac
   return (
     <View style={[styles.row, compact && styles.rowCompact]}>
       <Pressable style={[styles.button, compact && styles.buttonCompact]} onPress={onRoll}>
-        <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Рулетка</Text>
+        <View style={styles.buttonInner}>
+          <SpriteIcon icon="reroll" size={compact ? 36 : 48} />
+          <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Рулетка</Text>
+        </View>
       </Pressable>
       <Pressable
         style={[styles.button, compact && styles.buttonCompact, !canFreeze && styles.buttonDisabled]}
         onPress={onFreeze}
       >
-        <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Заморозить</Text>
+        <View style={styles.buttonInner}>
+          <SpriteIcon icon="freeze" size={compact ? 36 : 48} />
+          <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Заморозить</Text>
+        </View>
       </Pressable>
       <Pressable style={[styles.button, styles.centerButton, compact && styles.buttonCompact]} onPress={onBattle}>
-        <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Конец хода</Text>
+        <View style={styles.buttonInner}>
+          <SpriteIcon icon="endTurn" size={compact ? 36 : 48} />
+          <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Конец хода</Text>
+        </View>
       </Pressable>
     </View>
   );
@@ -40,7 +51,7 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 72,
     borderRadius: 16,
     borderWidth: 4,
     borderColor: "#16110b",
@@ -52,6 +63,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
+  buttonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   centerButton: {
     flex: 1.35,
   },
@@ -59,7 +75,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   buttonCompact: {
-    minHeight: 44,
+    minHeight: 52,
     borderRadius: 12,
     borderWidth: 3,
   },

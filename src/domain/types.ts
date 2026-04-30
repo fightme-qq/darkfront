@@ -44,7 +44,7 @@ export interface UnitInstance {
 
 export interface ShopSlot {
   slotId: string;
-  unit: UnitBlueprint;
+  unit: UnitBlueprint | null;
   frozen: boolean;
 }
 
@@ -53,4 +53,28 @@ export interface BattleResult {
   enemyPower: number;
   teamPower: number;
   summary: string;
+}
+
+export interface BattleViewUnit {
+  instanceId: string;
+  spriteKey: CharacterSpriteKey;
+  attack: number;
+  health: number;
+  tier: number;
+}
+
+export interface BattleClashStep {
+  playerBefore: BattleViewUnit[];
+  enemyBefore: BattleViewUnit[];
+  playerAfter: BattleViewUnit[];
+  enemyAfter: BattleViewUnit[];
+  playerFrontDamage: number;
+  enemyFrontDamage: number;
+}
+
+export interface BattlePlayback {
+  enemyTeam: BattleViewUnit[];
+  steps: BattleClashStep[];
+  result: BattleResult;
+  seed: number;
 }

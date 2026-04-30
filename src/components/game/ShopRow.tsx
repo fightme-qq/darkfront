@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { PanResponder, Platform, StyleSheet, View } from "react-native";
+import { PanResponder, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { ShopSlot } from "../../domain/types";
@@ -25,10 +25,17 @@ export function ShopRow({
   onTouchDragEnd,
 }: ShopRowProps) {
   const visibleShop = shop.slice(0, 3);
+  const { width } = useWindowDimensions();
   const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
   const rowGap = profile.spacing.shopGap;
-  const slotMaxWidth = profile.spacing.shopSlotMaxWidth;
+  const slotMaxWidth = Math.max(
+    62,
+    Math.min(
+      profile.spacing.shopSlotMaxWidth,
+      Math.floor((width * 0.55 - rowGap * (visibleShop.length - 1)) / visibleShop.length),
+    ),
+  );
 
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
@@ -75,6 +82,10 @@ function DraggableShopSlot({
   onTouchDragMove,
   onTouchDragEnd,
 }: DraggableShopSlotProps) {
+  if (!slot.unit) {
+    return <View style={[styles.slot, { maxWidth: slotMaxWidth }]} />;
+  }
+
   const draggingRef = useRef(false);
   const grantPointRef = useRef({ x: 0, y: 0 });
 

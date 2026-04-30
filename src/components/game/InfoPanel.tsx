@@ -3,6 +3,7 @@ import type { StyleProp, ViewStyle } from "react-native";
 
 import { getUnitSprite } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
+import { SpriteIcon } from "../ui/SpriteIcon";
 
 interface InfoPanelProps {
   selected: UnitInstance | ShopSlot | null;
@@ -21,12 +22,24 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
       {unit ? (
         <>
           <View style={styles.headerRow}>
-            <Image source={getUnitSprite(unit.spriteKey)} style={[styles.portrait, compact && styles.portraitCompact]} resizeMode="contain" />
+            <Image
+              source={getUnitSprite(unit.spriteKey)}
+              style={[styles.portrait, compact && styles.portraitCompact]}
+              resizeMode="contain"
+            />
             <View style={styles.headerTextCol}>
               <Text style={[styles.name, compact && styles.nameCompact]}>{unit.name}</Text>
-              <Text style={[styles.meta, compact && styles.metaCompact]}>
-                T{unit.tier}   ATK {unit.attack}   HP {unit.health}
-              </Text>
+              <View style={styles.metaRow}>
+                <Text style={[styles.meta, compact && styles.metaCompact]}>T{unit.tier}</Text>
+                <View style={styles.metaStat}>
+                  <SpriteIcon icon="attack" size={compact ? 20 : 26} />
+                  <Text style={[styles.meta, compact && styles.metaCompact]}>{unit.attack}</Text>
+                </View>
+                <View style={styles.metaStat}>
+                  <SpriteIcon icon="health" size={compact ? 20 : 26} />
+                  <Text style={[styles.meta, compact && styles.metaCompact]}>{unit.health}</Text>
+                </View>
+              </View>
             </View>
             <View style={styles.tierCoin}>
               <Text style={[styles.tierCoinText, compact && styles.tierCoinTextCompact]}>{unit.tier}</Text>
@@ -35,7 +48,10 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
           <Text style={[styles.ability, compact && styles.abilityCompact]}>{unit.ability}</Text>
           {canSell ? (
             <Pressable style={[styles.sellButton, compact && styles.sellButtonCompact]} onPress={onSellSelected}>
-              <Text style={[styles.sellText, compact && styles.sellTextCompact]}>Продать</Text>
+              <View style={styles.sellInner}>
+                <SpriteIcon icon="sell" size={compact ? 28 : 36} />
+                <Text style={[styles.sellText, compact && styles.sellTextCompact]}>Продать</Text>
+              </View>
             </Pressable>
           ) : null}
         </>
@@ -43,7 +59,8 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
         <>
           <Text style={[styles.name, compact && styles.nameCompact]}>Подсказка</Text>
           <Text style={[styles.ability, compact && styles.abilityCompact]}>
-            Выбери героя из отряда или магазина. Здесь будет краткое описание выбранного юнита и его способности.
+            Выбери героя из отряда или магазина. Здесь будет краткое описание выбранного юнита и его
+            способности.
           </Text>
         </>
       )}
@@ -85,6 +102,16 @@ const styles = StyleSheet.create({
   },
   headerTextCol: {
     flex: 1,
+    gap: 4,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  metaStat: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   portrait: {
@@ -157,6 +184,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
+  },
+  sellInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   sellText: {
     color: "#4d2b0c",
