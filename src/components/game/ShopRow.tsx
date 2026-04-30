@@ -1,9 +1,11 @@
 import { useMemo, useRef } from "react";
-import { PanResponder, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Image, PanResponder, Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { ShopSlot } from "../../domain/types";
 import { UnitCard } from "./UnitCard";
+
+const LEFT_SHOP_DECOR = require("../../../assets/f76bb0f8-d20d-4414-87f8-702c77d2b428.png");
 
 interface ShopRowProps {
   shop: ShopSlot[];
@@ -29,31 +31,53 @@ export function ShopRow({
   const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
   const rowGap = profile.spacing.shopGap;
-  const slotMaxWidth = Math.max(
+  const slotWidth = Math.max(
     62,
     Math.min(
       profile.spacing.shopSlotMaxWidth,
       Math.floor((width * 0.55 - rowGap * (visibleShop.length - 1)) / visibleShop.length),
     ),
   );
+  const slotHeight = Math.max(
+    72,
+    Math.floor((slotWidth / Math.max(1, profile.tokens.shop.width)) * profile.tokens.shop.minHeight),
+  );
+  const rowWidth = visibleShop.length * slotWidth + rowGap * (visibleShop.length - 1);
+  const decorSize = Math.round(slotWidth * 2.5);
+  const decorLeftOffset = Math.round(decorSize * 0.78);
 
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
-      <View style={[styles.row, { gap: rowGap }]}>
-        {visibleShop.map((slot, index) => (
-          <DraggableShopSlot
-            key={slot.slotId}
-            slot={slot}
-            index={index}
-            selected={slot.slotId === selectedId}
-            onSelect={onSelect}
-            compact={compact}
-            slotMaxWidth={slotMaxWidth}
-            onTouchDragStart={onTouchDragStart}
-            onTouchDragMove={onTouchDragMove}
-            onTouchDragEnd={onTouchDragEnd}
+      <View style={styles.rowCenter}>
+        <View style={[styles.row, { gap: rowGap, width: rowWidth }]}>
+          <Image
+            source={LEFT_SHOP_DECOR}
+            resizeMode="contain"
+            style={[
+              styles.shopDecor,
+              {
+                width: decorSize,
+                height: decorSize,
+                left: -decorLeftOffset,
+              },
+            ]}
           />
-        ))}
+          {visibleShop.map((slot, index) => (
+            <DraggableShopSlot
+              key={slot.slotId}
+              slot={slot}
+              index={index}
+              selected={slot.slotId === selectedId}
+              onSelect={onSelect}
+              compact={compact}
+              slotWidth={slotWidth}
+              slotHeight={slotHeight}
+              onTouchDragStart={onTouchDragStart}
+              onTouchDragMove={onTouchDragMove}
+              onTouchDragEnd={onTouchDragEnd}
+            />
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -65,7 +89,8 @@ interface DraggableShopSlotProps {
   selected: boolean;
   onSelect: (id: string) => void;
   compact?: boolean;
-  slotMaxWidth: number;
+  slotWidth: number;
+  slotHeight: number;
   onTouchDragStart?: (shopIndex: number, x: number, y: number) => void;
   onTouchDragMove?: (x: number, y: number) => void;
   onTouchDragEnd?: (shopIndex: number, x: number, y: number) => void;
@@ -77,13 +102,14 @@ function DraggableShopSlot({
   selected,
   onSelect,
   compact,
-  slotMaxWidth,
+  slotWidth,
+  slotHeight,
   onTouchDragStart,
   onTouchDragMove,
   onTouchDragEnd,
 }: DraggableShopSlotProps) {
   if (!slot.unit) {
-    return <View style={[styles.slot, { maxWidth: slotMaxWidth }]} />;
+    return <View style={[styles.slot, { width: slotWidth, minHeight: slotHeight }]} />;
   }
 
   const draggingRef = useRef(false);
@@ -135,7 +161,7 @@ function DraggableShopSlot({
   );
 
   return (
-    <View style={[styles.slot, { maxWidth: slotMaxWidth }]} {...panResponder.panHandlers}>
+    <View style={[styles.slot, { width: slotWidth, minHeight: slotHeight }]} {...panResponder.panHandlers}>
       <UnitCard
         unit={slot.unit}
         selected={selected}
@@ -151,15 +177,30 @@ function DraggableShopSlot({
 const styles = StyleSheet.create({
   wrapper: {
     gap: 8,
+    overflow: "visible",
   },
   wrapperCompact: {
     gap: 4,
   },
-  row: {
-    flexDirection: "row",
+  rowCenter: {
+    alignItems: "center",
     justifyContent: "center",
+    overflow: "visible",
+  },
+  row: {
+    position: "relative",
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    overflow: "visible",
+  },
+  shopDecor: {
+    position: "absolute",
+    bottom: -50,
+    zIndex: 1,
+    pointerEvents: "none",
   },
   slot: {
-    flex: 1,
+    zIndex: 2,
   },
 });
