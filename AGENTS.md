@@ -169,6 +169,17 @@ Treat these rules as critical:
 - web preview is a supporting tool, not the primary product target
 - new gameplay interaction patterns should be validated against mobile landscape constraints first
 
+### 4.7. Approved Work Should Reach Git
+
+If the user reviews a result and explicitly says it is good or approved, agents should treat that as permission to persist the accepted state unless the user asks to keep it local-only.
+
+Default behavior after approval:
+
+- commit the accepted changes
+- push them to the main remote repository
+
+This keeps GitHub aligned with the approved working state instead of leaving good changes only in the local workspace.
+
 ## 5. Flexible Rules
 
 These rules are useful defaults, but they are not absolute. Break them if there is a strong reason.
