@@ -1,32 +1,31 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { palette } from "../../constants/theme";
-
 interface TopBarProps {
   gold: number;
   lives: number;
   wins: number;
   turn: number;
   tier: number;
+  compact?: boolean;
 }
 
-export function TopBar({ gold, lives, wins, turn, tier }: TopBarProps) {
+export function TopBar({ gold, lives, wins, turn, tier, compact }: TopBarProps) {
   return (
-    <View style={styles.row}>
-      <Stat title="Золото" value={gold} />
-      <Stat title="Жизни" value={lives} />
-      <Stat title="Победы" value={`${wins}/10`} />
-      <Stat title="Ход" value={turn} />
-      <Stat title="Тир" value={tier} />
+    <View style={[styles.row, compact && styles.rowCompact]}>
+      <Stat icon="🪙" value={gold} compact={compact} />
+      <Stat icon="❤" value={lives} compact={compact} />
+      <Stat icon="⌛" value={turn} compact={compact} />
+      <Stat icon="🏆" value={`${wins}/10`} compact={compact} />
+      <Stat icon="★" value={tier} compact={compact} />
     </View>
   );
 }
 
-function Stat({ title, value }: { title: string; value: string | number }) {
+function Stat({ icon, value, compact }: { icon: string; value: string | number; compact?: boolean }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.label}>{title}</Text>
-      <Text style={styles.value}>{value}</Text>
+    <View style={[styles.card, compact && styles.cardCompact]}>
+      <Text style={[styles.icon, compact && styles.iconCompact]}>{icon}</Text>
+      <Text style={[styles.value, compact && styles.valueCompact]}>{value}</Text>
     </View>
   );
 }
@@ -34,25 +33,47 @@ function Stat({ title, value }: { title: string; value: string | number }) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
+    alignSelf: "flex-start",
+  },
+  rowCompact: {
+    gap: 5,
   },
   card: {
-    minWidth: 88,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: palette.panel,
-    borderWidth: 1,
-    borderColor: palette.border,
-    borderRadius: 14,
+    minWidth: 84,
+    height: 42,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: "#fff9ef",
+    borderWidth: 3,
+    borderColor: "#111111",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  label: {
-    color: palette.textMuted,
-    fontSize: 11,
-    marginBottom: 4,
+  cardCompact: {
+    minWidth: 60,
+    height: 30,
+    paddingHorizontal: 7,
+    borderRadius: 9,
+    borderWidth: 2,
+  },
+  icon: {
+    fontSize: 18,
+  },
+  iconCompact: {
+    fontSize: 13,
   },
   value: {
-    color: palette.text,
-    fontSize: 18,
-    fontWeight: "700",
+    color: "#111111",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  valueCompact: {
+    fontSize: 14,
   },
 });

@@ -227,6 +227,6 @@ foreach ($unit in $sortedTokens) {
     $lines.Add("| $title | $($unit.Tier) | $stats | $packs | $level1 | $level2 | $level3 |")
 }
 
-$outputPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\SAP-UNITS.md'))
+$outputPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\docs\design\SAP-UNITS.md'))
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllLines($outputPath, $lines, $utf8NoBom)

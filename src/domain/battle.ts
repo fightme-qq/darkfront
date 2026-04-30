@@ -1,5 +1,5 @@
-import type { BattleResult, UnitInstance } from "./types";
 import { nextInt } from "./rng";
+import type { BattleResult, UnitInstance } from "./types";
 
 export function getTeamPower(team: Array<UnitInstance | null>) {
   return team.reduce((total, unit) => {
@@ -15,7 +15,7 @@ export function resolveMockBattle(
   team: Array<UnitInstance | null>,
   turn: number,
   wins: number,
-  seed: number
+  seed: number,
 ) {
   const teamPower = getTeamPower(team);
   const roll = nextInt(seed, 8);

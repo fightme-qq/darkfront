@@ -6,6 +6,15 @@ export type UnitTag =
   | "economy"
   | "scaling";
 
+export type CharacterSpriteKey =
+  | "grave-acolyte"
+  | "bone-wanderer"
+  | "dusk-swordsman"
+  | "runic-hound"
+  | "skull-shieldbearer"
+  | "weary-squire"
+  | "winged-drakeling";
+
 export interface UnitBlueprint {
   id: string;
   name: string;
@@ -13,6 +22,7 @@ export interface UnitBlueprint {
   attack: number;
   health: number;
   accent: string;
+  spriteKey: CharacterSpriteKey;
   tags: UnitTag[];
   ability: string;
 }
@@ -27,6 +37,7 @@ export interface UnitInstance {
   level: number;
   experience: number;
   accent: string;
+  spriteKey: CharacterSpriteKey;
   tags: UnitTag[];
   ability: string;
 }

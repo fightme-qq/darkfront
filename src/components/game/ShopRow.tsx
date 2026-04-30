@@ -1,85 +1,154 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useRef } from "react";
+import { PanResponder, Platform, StyleSheet, View } from "react-native";
 
 import type { ShopSlot } from "../../domain/types";
-import { palette } from "../../constants/theme";
 import { UnitCard } from "./UnitCard";
 
 interface ShopRowProps {
   shop: ShopSlot[];
   selectedId: string | null;
-  onBuy: (index: number) => void;
-  onFreeze: (index: number) => void;
   onSelect: (id: string) => void;
+  compact?: boolean;
+  onTouchDragStart?: (shopIndex: number, x: number, y: number) => void;
+  onTouchDragMove?: (x: number, y: number) => void;
+  onTouchDragEnd?: (shopIndex: number, x: number, y: number) => void;
 }
 
-export function ShopRow({ shop, selectedId, onBuy, onFreeze, onSelect }: ShopRowProps) {
+export function ShopRow({
+  shop,
+  selectedId,
+  onSelect,
+  compact,
+  onTouchDragStart,
+  onTouchDragMove,
+  onTouchDragEnd,
+}: ShopRowProps) {
+  const visibleShop = shop.slice(0, 3);
+
   return (
-    <View style={styles.wrapper}>
-      <Text style={styles.title}>Магазин</Text>
-      <View style={styles.row}>
-        {shop.map((slot, index) => (
-          <View key={slot.slotId} style={styles.slot}>
-            <UnitCard
-              unit={slot.unit}
-              selected={slot.slotId === selectedId}
-              frozen={slot.frozen}
-              onPress={() => onSelect(slot.slotId)}
-            />
-            <View style={styles.actions}>
-              <ActionButton label="Купить" onPress={() => onBuy(index)} />
-              <ActionButton
-                label={slot.frozen ? "Разморозить" : "Заморозить"}
-                onPress={() => onFreeze(index)}
-              />
-            </View>
-          </View>
+    <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
+      <View style={[styles.row, compact && styles.rowCompact]}>
+        {visibleShop.map((slot, index) => (
+          <DraggableShopSlot
+            key={slot.slotId}
+            slot={slot}
+            index={index}
+            selected={slot.slotId === selectedId}
+            onSelect={onSelect}
+            compact={compact}
+            onTouchDragStart={onTouchDragStart}
+            onTouchDragMove={onTouchDragMove}
+            onTouchDragEnd={onTouchDragEnd}
+          />
         ))}
       </View>
     </View>
   );
 }
 
-function ActionButton({ label, onPress }: { label: string; onPress: () => void }) {
+interface DraggableShopSlotProps {
+  slot: ShopSlot;
+  index: number;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  compact?: boolean;
+  onTouchDragStart?: (shopIndex: number, x: number, y: number) => void;
+  onTouchDragMove?: (x: number, y: number) => void;
+  onTouchDragEnd?: (shopIndex: number, x: number, y: number) => void;
+}
+
+function DraggableShopSlot({
+  slot,
+  index,
+  selected,
+  onSelect,
+  compact,
+  onTouchDragStart,
+  onTouchDragMove,
+  onTouchDragEnd,
+}: DraggableShopSlotProps) {
+  const draggingRef = useRef(false);
+  const grantPointRef = useRef({ x: 0, y: 0 });
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4,
+        onPanResponderGrant: (event) => {
+          draggingRef.current = false;
+          grantPointRef.current = {
+            x: event.nativeEvent.pageX,
+            y: event.nativeEvent.pageY,
+          };
+          onSelect(slot.slotId);
+        },
+        onPanResponderMove: (event, gestureState) => {
+          if (!draggingRef.current && (Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6)) {
+            draggingRef.current = true;
+            onSelect(slot.slotId);
+            onTouchDragStart?.(index, grantPointRef.current.x, grantPointRef.current.y);
+          }
+
+          if (draggingRef.current) {
+            onTouchDragMove?.(event.nativeEvent.pageX, event.nativeEvent.pageY);
+          }
+        },
+        onPanResponderRelease: (event) => {
+          if (draggingRef.current) {
+            onTouchDragEnd?.(index, event.nativeEvent.pageX, event.nativeEvent.pageY);
+          } else {
+            onSelect(slot.slotId);
+          }
+          draggingRef.current = false;
+        },
+        onPanResponderTerminate: (event) => {
+          if (draggingRef.current) {
+            onTouchDragEnd?.(index, event.nativeEvent.pageX, event.nativeEvent.pageY);
+          } else {
+            onSelect(slot.slotId);
+          }
+          draggingRef.current = false;
+        },
+      }),
+    [index, onSelect, onTouchDragEnd, onTouchDragMove, onTouchDragStart, slot.slotId],
+  );
+
   return (
-    <Pressable onPress={onPress} style={styles.button}>
-      <Text style={styles.buttonText}>{label}</Text>
-    </Pressable>
+    <View style={[styles.slot, compact && styles.slotCompact]} {...panResponder.panHandlers}>
+      <UnitCard
+        unit={slot.unit}
+        selected={selected}
+        frozen={slot.frozen}
+        onPress={() => onSelect(slot.slotId)}
+        compact={compact}
+        mode="shop"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: 10,
+    gap: 8,
   },
-  title: {
-    color: palette.text,
-    fontSize: 18,
-    fontWeight: "800",
+  wrapperCompact: {
+    gap: 4,
   },
   row: {
     flexDirection: "row",
-    gap: 10,
+    justifyContent: "center",
+    gap: 6,
+  },
+  rowCompact: {
+    gap: 4,
   },
   slot: {
     flex: 1,
-    gap: 8,
+    maxWidth: 196,
   },
-  actions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: palette.panel,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: palette.text,
-    fontSize: 12,
-    fontWeight: "700",
+  slotCompact: {
+    maxWidth: 146,
   },
 });

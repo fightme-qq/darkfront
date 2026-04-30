@@ -11,6 +11,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "preview:device": "node scripts/device-preview-server.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

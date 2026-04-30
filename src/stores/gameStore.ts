@@ -21,6 +21,8 @@ interface GameState {
   shopSlotCounter: number;
   rollShop: () => void;
   buyUnit: (shopIndex: number) => void;
+  buyUnitToSlot: (shopIndex: number, teamIndex: number) => void;
+  moveUnit: (fromIndex: number, toIndex: number) => void;
   toggleFreeze: (shopIndex: number) => void;
   sellUnit: (teamIndex: number) => void;
   selectEntity: (id: string | null) => void;
@@ -38,6 +40,7 @@ function createInstance(unit: ShopSlot["unit"], counter: number): UnitInstance {
     level: 1,
     experience: 0,
     accent: unit.accent,
+    spriteKey: unit.spriteKey,
     tags: unit.tags,
     ability: unit.ability,
   };
@@ -94,6 +97,48 @@ export const useGameStore = create<GameState>((set, get) => ({
       unitCounter: state.unitCounter + 1,
       shopSlotCounter: rerolled.slotIdCounter,
       selectedId: nextTeam[openIndex]?.instanceId ?? null,
+    });
+  },
+  buyUnitToSlot: (shopIndex, teamIndex) => {
+    const state = get();
+    const slot = state.shop[shopIndex];
+    if (!slot || state.gold < GAME_CONFIG.buyCost || state.team[teamIndex]) {
+      return;
+    }
+
+    const nextTeam = [...state.team];
+    nextTeam[teamIndex] = createInstance(slot.unit, state.unitCounter);
+    const nextShop = [...state.shop];
+    nextShop[shopIndex] = { ...slot, frozen: false };
+    const rerolled = rollShop(state.seed, UNIT_BLUEPRINTS, state.turn, nextShop, state.shopSlotCounter);
+    set({
+      gold: state.gold - GAME_CONFIG.buyCost,
+      team: nextTeam,
+      shop: rerolled.slots,
+      seed: rerolled.seed,
+      unitCounter: state.unitCounter + 1,
+      shopSlotCounter: rerolled.slotIdCounter,
+      selectedId: nextTeam[teamIndex]?.instanceId ?? null,
+    });
+  },
+  moveUnit: (fromIndex, toIndex) => {
+    const state = get();
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    const fromUnit = state.team[fromIndex];
+    if (!fromUnit) {
+      return;
+    }
+
+    const nextTeam = [...state.team];
+    nextTeam[fromIndex] = state.team[toIndex];
+    nextTeam[toIndex] = fromUnit;
+
+    set({
+      team: nextTeam,
+      selectedId: nextTeam[toIndex]?.instanceId ?? null,
     });
   },
   toggleFreeze: (shopIndex) => {

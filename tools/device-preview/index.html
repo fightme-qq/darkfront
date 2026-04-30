@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Device Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f141c;
+        --panel: #161d28;
+        --panel-2: #1e2836;
+        --border: #31415a;
+        --text: #ecf1f8;
+        --muted: #9eb0c8;
+        --accent: #ff5d80;
+        --accent-2: #ffd166;
+        --shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(255, 93, 128, 0.12), transparent 24%),
+          radial-gradient(circle at top right, rgba(255, 209, 102, 0.1), transparent 20%),
+          linear-gradient(180deg, #111722, #0c1017);
+        color: var(--text);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 24px;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(10, 14, 20, 0.75);
+        backdrop-filter: blur(12px);
+      }
+
+      .preview-area {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(14, 20, 28, 0.55);
+        backdrop-filter: blur(12px);
+      }
+
+      .header h1,
+      .sidebar h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.1;
+      }
+
+      .sidebar h1 {
+        color: var(--accent);
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .panel {
+        margin-top: 18px;
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(29, 37, 51, 0.95), rgba(17, 23, 33, 0.95));
+        box-shadow: var(--shadow);
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .field:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      select,
+      input,
+      button {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+      }
+
+      select,
+      input {
+        width: 100%;
+        padding: 12px 14px;
+      }
+
+      button {
+        padding: 12px 14px;
+        cursor: pointer;
+        transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        border-color: #476181;
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .button-row + .button-row {
+        margin-top: 10px;
+      }
+
+      .accent {
+        background: linear-gradient(135deg, var(--accent), #ff7f73);
+        color: #1f0c12;
+        font-weight: 700;
+        border: none;
+      }
+
+      .minor {
+        background: var(--panel-2);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        padding: 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .metric .label {
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .metric .value {
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .frame-stage {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        overflow: hidden;
+      }
+
+      .frame-shell {
+        position: relative;
+        padding: 8px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+      }
+
+      .viewport {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        border-radius: 12px;
+        background: #0b1017;
+      }
+
+      iframe {
+        border: none;
+        display: block;
+        background: #10131a;
+        transform-origin: top left;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+      }
+
+      .status {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .small {
+        font-size: 12px;
+      }
+
+      @media (max-width: 1100px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>Device Preview</h1>
+        <p class="hint">
+          Локальная обертка для `localhost`-превью. Удобна для `Expo Web`, обычных React-приложений и любой страницы,
+          которую хочется проверять как телефон в landscape.
+        </p>
+
+        <section class="panel">
+          <div class="field">
+            <label for="preset">Preset</label>
+            <select id="preset"></select>
+          </div>
+
+          <div class="field">
+            <label for="target">Target URL</label>
+            <input id="target" type="url" />
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <div class="label">Width</div>
+              <div class="value" id="widthValue">0</div>
+            </div>
+            <div class="metric">
+              <div class="label">Height</div>
+              <div class="value" id="heightValue">0</div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 14px;">
+            <label for="zoom">Zoom</label>
+            <input id="zoom" type="range" min="40" max="100" value="100" />
+          </div>
+
+          <div class="button-row">
+            <button id="rotate" class="minor" type="button">Rotate</button>
+            <button id="reload" class="minor" type="button">Reload</button>
+          </div>
+
+          <div class="button-row">
+            <button id="apply" class="accent" type="button">Apply URL</button>
+            <button id="openTarget" class="minor" type="button">Open Target</button>
+          </div>
+
+          <p class="status">
+            Подходит для проверки layout, safe-area отступов, ширины кнопок и поведения экрана на разных мобильных
+            размерах без внешнего сервиса.
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="field">
+            <label>Recommended presets</label>
+            <div class="hint small">
+              `iPhone 15 Pro Max`, `iPhone 15`, `Galaxy S24`, `Pixel 9`, `iPad Mini`, `16:9 Landscape`
+            </div>
+          </div>
+          <div class="field">
+            <label>Typical Expo flow</label>
+            <div class="hint small">
+              Сначала запусти `npm run web`, потом подними этот preview и направь его на адрес Expo, например
+              `http://localhost:8082`.
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="preview-area">
+        <header class="header">
+          <h1>Landscape Device Sandbox</h1>
+          <div class="hint" id="activeMeta"></div>
+        </header>
+
+        <div class="frame-stage">
+          <div class="frame-shell">
+            <div class="viewport" id="viewport">
+              <iframe id="frame" title="Device preview"></iframe>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const targetInput = document.getElementById("target");
+      const presetSelect = document.getElementById("preset");
+      const widthValue = document.getElementById("widthValue");
+      const heightValue = document.getElementById("heightValue");
+      const zoomInput = document.getElementById("zoom");
+      const activeMeta = document.getElementById("activeMeta");
+      const viewport = document.getElementById("viewport");
+      const frame = document.getElementById("frame");
+      const frameStage = document.querySelector(".frame-stage");
+
+      const targetUrl = __TARGET_URL__;
+      const presets = __PRESETS__;
+
+      let currentPreset = { ...presets[0] };
+      let isRotated = false;
+
+      function renderPresetOptions() {
+        presets.forEach((preset, index) => {
+          const option = document.createElement("option");
+          option.value = preset.id;
+          option.textContent = `${preset.label} ${preset.width}x${preset.height}`;
+          if (index === 0) {
+            option.selected = true;
+          }
+          presetSelect.appendChild(option);
+        });
+      }
+
+      function getScale() {
+        return Number(zoomInput.value) / 100;
+      }
+
+      function getFitScale(width, height) {
+        const stageRect = frameStage.getBoundingClientRect();
+        const availableWidth = Math.max(stageRect.width - 80, 240);
+        const availableHeight = Math.max(stageRect.height - 80, 180);
+        return Math.min(availableWidth / width, availableHeight / height, 1);
+      }
+
+      function applyFrame() {
+        const scale = Math.min(getScale(), getFitScale(currentPreset.width, currentPreset.height));
+        const width = currentPreset.width;
+        const height = currentPreset.height;
+
+        widthValue.textContent = width;
+        heightValue.textContent = height;
+        activeMeta.textContent = `${currentPreset.label}${isRotated ? " rotated" : ""} · ${width} x ${height} · ${Math.round(scale * 100)}% visible`;
+
+        viewport.style.width = `${Math.round(width * scale)}px`;
+        viewport.style.height = `${Math.round(height * scale)}px`;
+
+        frame.style.width = `${width}px`;
+        frame.style.height = `${height}px`;
+        frame.style.transform = `scale(${scale})`;
+      }
+
+      function setPresetById(id) {
+        currentPreset = { ...(presets.find((preset) => preset.id === id) || presets[0]) };
+        isRotated = false;
+        applyFrame();
+      }
+
+      function rotatePreset() {
+        currentPreset = { ...currentPreset, width: currentPreset.height, height: currentPreset.width };
+        isRotated = !isRotated;
+        applyFrame();
+      }
+
+      function applyTarget() {
+        frame.src = targetInput.value.trim();
+      }
+
+      renderPresetOptions();
+      targetInput.value = targetUrl;
+      applyTarget();
+      applyFrame();
+
+      presetSelect.addEventListener("change", (event) => {
+        setPresetById(event.target.value);
+      });
+
+      zoomInput.addEventListener("input", applyFrame);
+      document.getElementById("rotate").addEventListener("click", rotatePreset);
+      document.getElementById("reload").addEventListener("click", () => frame.contentWindow?.location.reload());
+      document.getElementById("apply").addEventListener("click", applyTarget);
+      document.getElementById("openTarget").addEventListener("click", () => window.open(targetInput.value.trim(), "_blank"));
+      window.addEventListener("resize", applyFrame);
+    </script>
+  </body>
+</html>
