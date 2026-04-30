@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import { PanResponder, Platform, StyleSheet, View } from "react-native";
 
+import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { ShopSlot } from "../../domain/types";
 import { UnitCard } from "./UnitCard";
 
@@ -24,10 +25,14 @@ export function ShopRow({
   onTouchDragEnd,
 }: ShopRowProps) {
   const visibleShop = shop.slice(0, 3);
+  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
+  const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
+  const rowGap = profile.spacing.shopGap;
+  const slotMaxWidth = profile.spacing.shopSlotMaxWidth;
 
   return (
     <View style={[styles.wrapper, compact && styles.wrapperCompact]}>
-      <View style={[styles.row, compact && styles.rowCompact]}>
+      <View style={[styles.row, { gap: rowGap }]}>
         {visibleShop.map((slot, index) => (
           <DraggableShopSlot
             key={slot.slotId}
@@ -36,6 +41,7 @@ export function ShopRow({
             selected={slot.slotId === selectedId}
             onSelect={onSelect}
             compact={compact}
+            slotMaxWidth={slotMaxWidth}
             onTouchDragStart={onTouchDragStart}
             onTouchDragMove={onTouchDragMove}
             onTouchDragEnd={onTouchDragEnd}
@@ -52,6 +58,7 @@ interface DraggableShopSlotProps {
   selected: boolean;
   onSelect: (id: string) => void;
   compact?: boolean;
+  slotMaxWidth: number;
   onTouchDragStart?: (shopIndex: number, x: number, y: number) => void;
   onTouchDragMove?: (x: number, y: number) => void;
   onTouchDragEnd?: (shopIndex: number, x: number, y: number) => void;
@@ -63,6 +70,7 @@ function DraggableShopSlot({
   selected,
   onSelect,
   compact,
+  slotMaxWidth,
   onTouchDragStart,
   onTouchDragMove,
   onTouchDragEnd,
@@ -116,7 +124,7 @@ function DraggableShopSlot({
   );
 
   return (
-    <View style={[styles.slot, compact && styles.slotCompact]} {...panResponder.panHandlers}>
+    <View style={[styles.slot, { maxWidth: slotMaxWidth }]} {...panResponder.panHandlers}>
       <UnitCard
         unit={slot.unit}
         selected={selected}
@@ -139,16 +147,8 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 6,
-  },
-  rowCompact: {
-    gap: 4,
   },
   slot: {
     flex: 1,
-    maxWidth: 196,
-  },
-  slotCompact: {
-    maxWidth: 146,
   },
 });

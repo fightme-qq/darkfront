@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 
+import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
 
@@ -49,6 +50,12 @@ export function UnitCard({
   webDragProps,
 }: UnitCardProps) {
   const tuning = unit ? getUnitSpriteTuning(unit.spriteKey) : null;
+  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
+  const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
+  const teamTokenConfig = profile.tokens.team;
+  const shopTokenConfig = profile.tokens.shop;
+  const tierConfig = profile.tierBadge;
+  const statsConfig = profile.stats;
 
   if (mode === "team") {
     if (!unit) {
@@ -72,24 +79,24 @@ export function UnitCard({
         onPress={onPress}
         style={[
           styles.heroToken,
-          styles.teamToken,
+          {
+            width: teamTokenConfig.width,
+            minHeight: teamTokenConfig.minHeight,
+            marginTop: teamTokenConfig.marginTop,
+          },
           compact && styles.heroTokenCompact,
-          compact && styles.teamTokenCompact,
-          selected && styles.heroTokenSelected,
         ]}
       >
-        <Image
-          source={getUnitSprite(unit.spriteKey)}
-          style={[
-            compact ? styles.teamHeroImageCompact : styles.teamHeroImage,
-            {
-              transform: [{ scale: tuning?.scale ?? 1 }],
-              marginTop: tuning?.offsetY ?? 0,
-            },
-          ]}
-          resizeMode="contain"
+        {selected ? <SelectionCorners compact={compact} /> : null}
+        <HeroSprite
+          spriteKey={unit.spriteKey}
+          compact={compact}
+          mode="team"
+          offsetX={tuning?.offsetX ?? 0}
+          offsetY={tuning?.offsetY ?? 0}
+          scale={tuning?.scale ?? 1}
         />
-        <StatsRow attack={unit.attack} health={unit.health} compact={compact} />
+        <StatsRow attack={unit.attack} health={unit.health} compact={compact} config={statsConfig} />
       </Pressable>
     );
   }
@@ -104,20 +111,25 @@ export function UnitCard({
       {...(webDragProps as any)}
       style={[
         styles.heroToken,
-        styles.shopToken,
+        {
+          width: shopTokenConfig.width,
+          minHeight: shopTokenConfig.minHeight,
+          marginTop: shopTokenConfig.marginTop,
+        },
         compact && styles.heroTokenCompact,
-        compact && styles.shopTokenCompact,
-        selected && styles.heroTokenSelected,
         frozen && styles.heroTokenFrozen,
         webInteractiveStyle,
       ]}
     >
+      {selected ? <SelectionCorners compact={compact} /> : null}
       <View
         style={[
           styles.tierChip,
           compact && styles.tierChipCompact,
           {
             backgroundColor: unit.accent,
+            top: tierConfig.top,
+            right: tierConfig.right,
             transform: [
               { translateX: tuning?.tierOffsetX ?? 0 },
               { translateY: tuning?.tierOffsetY ?? 0 },
@@ -127,26 +139,81 @@ export function UnitCard({
       >
         <Text style={[styles.tierChipText, compact && styles.tierChipTextCompact]}>{unit.tier}</Text>
       </View>
-      <Image
-        source={getUnitSprite(unit.spriteKey)}
-        style={[
-          compact ? styles.shopHeroImageCompact : styles.shopHeroImage,
-          {
-            transform: [{ scale: tuning?.scale ?? 1 }],
-            marginTop: tuning?.offsetY ?? 0,
-          },
-        ]}
-        resizeMode="contain"
+      <HeroSprite
+        spriteKey={unit.spriteKey}
+        compact={compact}
+        mode="shop"
+        offsetX={tuning?.offsetX ?? 0}
+        offsetY={tuning?.offsetY ?? 0}
+        scale={tuning?.scale ?? 1}
       />
-      <StatsRow attack={unit.attack} health={unit.health} compact={compact} />
+      <StatsRow attack={unit.attack} health={unit.health} compact={compact} config={statsConfig} />
       {footer}
     </Pressable>
   );
 }
 
-function StatsRow({ attack, health, compact }: { attack: number; health: number; compact?: boolean }) {
+function HeroSprite({
+  spriteKey,
+  compact,
+  mode,
+  offsetX,
+  offsetY,
+  scale,
+}: {
+  spriteKey: UnitInstance["spriteKey"];
+  compact?: boolean;
+  mode: "team" | "shop";
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}) {
+  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
+  const tokenConfig =
+    mode === "team"
+      ? HERO_LAYOUT_CONFIG.profiles[profileKey].tokens.team
+      : HERO_LAYOUT_CONFIG.profiles[profileKey].tokens.shop;
+
   return (
-    <View style={[styles.statsRow, compact && styles.statsRowCompact]}>
+    <View style={[styles.spriteStage, { height: tokenConfig.stageHeight }]}>
+      <View
+        style={[
+          styles.spriteAnchor,
+          {
+            width: tokenConfig.imageSize,
+            height: tokenConfig.imageSize,
+            marginLeft: -(tokenConfig.imageSize / 2),
+            bottom: tokenConfig.baselineBottom,
+          },
+        ]}
+      >
+        <Image
+          source={getUnitSprite(spriteKey)}
+          style={{
+            width: tokenConfig.imageSize,
+            height: tokenConfig.imageSize,
+            transform: [{ translateX: offsetX }, { translateY: offsetY }, { scale }],
+          }}
+          resizeMode="contain"
+        />
+      </View>
+    </View>
+  );
+}
+
+function StatsRow({
+  attack,
+  health,
+  compact,
+  config,
+}: {
+  attack: number;
+  health: number;
+  compact?: boolean;
+  config: { marginTop: number; gap: number };
+}) {
+  return (
+    <View style={[styles.statsRow, { marginTop: config.marginTop, gap: config.gap }]}>
       <StatBadge label="ATK" value={attack} color="#17120f" compact={compact} />
       <StatBadge label="HP" value={health} color="#a82f29" compact={compact} />
     </View>
@@ -212,6 +279,49 @@ function PlacementArrow({ compact }: { compact?: boolean }) {
   );
 }
 
+function SelectionCorners({ compact }: { compact?: boolean }) {
+  const pulse = useRef(new Animated.Value(0.72)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.72,
+          duration: 520,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <View pointerEvents="none" style={styles.selectionOverlay}>
+      <Animated.View
+        style={[styles.selectionCorner, styles.cornerTopLeft, compact && styles.selectionCornerCompact, { opacity: pulse }]}
+      />
+      <Animated.View
+        style={[styles.selectionCorner, styles.cornerTopRight, compact && styles.selectionCornerCompact, { opacity: pulse }]}
+      />
+      <Animated.View
+        style={[styles.selectionCorner, styles.cornerBottomLeft, compact && styles.selectionCornerCompact, { opacity: pulse }]}
+      />
+      <Animated.View
+        style={[styles.selectionCorner, styles.cornerBottomRight, compact && styles.selectionCornerCompact, { opacity: pulse }]}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   emptySlotWrap: {
     alignItems: "center",
@@ -268,58 +378,60 @@ const styles = StyleSheet.create({
   heroTokenCompact: {
     paddingHorizontal: 1,
   },
-  teamToken: {
-    width: 156,
-    minHeight: 156,
-    marginTop: -30,
-  },
-  teamTokenCompact: {
-    width: 118,
-    minHeight: 118,
-    marginTop: -18,
-  },
-  shopToken: {
-    width: 156,
-    minHeight: 156,
-    paddingTop: 4,
-    marginTop: -30,
-  },
-  shopTokenCompact: {
-    width: 118,
-    minHeight: 118,
-    marginTop: -18,
-    paddingTop: 3,
-  },
-  heroTokenSelected: {
-    transform: [{ scale: 1.03 }],
-  },
   heroTokenFrozen: {
     opacity: 0.76,
   },
-  shopHeroImage: {
-    width: 156,
-    height: 156,
-    marginBottom: -18,
+  selectionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
   },
-  shopHeroImageCompact: {
-    width: 112,
-    height: 112,
-    marginBottom: -10,
+  selectionCorner: {
+    position: "absolute",
+    width: 16,
+    height: 16,
+    borderColor: "#ffd34d",
   },
-  teamHeroImage: {
-    width: 156,
-    height: 156,
-    marginBottom: -18,
+  selectionCornerCompact: {
+    width: 12,
+    height: 12,
   },
-  teamHeroImageCompact: {
-    width: 112,
-    height: 112,
-    marginBottom: -10,
+  cornerTopLeft: {
+    top: 6,
+    left: 6,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+  },
+  cornerTopRight: {
+    top: 6,
+    right: 6,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+  },
+  cornerBottomLeft: {
+    bottom: 20,
+    left: 6,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+  },
+  cornerBottomRight: {
+    bottom: 20,
+    right: 6,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+  },
+  spriteStage: {
+    width: "100%",
+    position: "relative",
+    overflow: "visible",
+  },
+  spriteAnchor: {
+    position: "absolute",
+    left: "50%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tierChip: {
     position: "absolute",
-    top: 14,
-    left: 94,
     minWidth: 28,
     height: 28,
     borderRadius: 14,
@@ -327,11 +439,9 @@ const styles = StyleSheet.create({
     borderColor: "#1f150e",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 2,
+    zIndex: 6,
   },
   tierChipCompact: {
-    top: 10,
-    left: 68,
     minWidth: 22,
     height: 22,
     borderRadius: 11,
@@ -346,12 +456,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: 6,
     alignItems: "center",
-    marginTop: -10,
-  },
-  statsRowCompact: {
-    marginTop: -6,
   },
   statBadge: {
     flexDirection: "row",

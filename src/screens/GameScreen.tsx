@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ImageBackground, StyleSheet, useWindowDimensions, View } from "react-native";
+import type { ViewStyle } from "react-native";
 
 import { ActionBar } from "../components/game/ActionBar";
 import { InfoPanel } from "../components/game/InfoPanel";
@@ -7,6 +8,7 @@ import { ShopRow } from "../components/game/ShopRow";
 import { TeamBoard } from "../components/game/TeamBoard";
 import { TopBar } from "../components/game/TopBar";
 import { UnitCard } from "../components/game/UnitCard";
+import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../constants/heroLayoutConfig";
 import type { ShopSlot, UnitInstance } from "../domain/types";
 import { useGameStore } from "../stores/gameStore";
 
@@ -39,9 +41,10 @@ export function GameScreen() {
     y: number;
   } | null>(null);
 
-  const ultraCompact = height <= 380;
-  const compact = height <= 430 || width <= 820;
-  const narrow = width <= 850;
+  const profileKey = getHeroViewportProfile(width, height);
+  const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
+  const compact = profileKey !== "largePhone";
+  const ultraCompact = profileKey === "smallPhone";
 
   const hoveredSlotIndex = useMemo(() => {
     if (!dragState) {
@@ -69,6 +72,8 @@ export function GameScreen() {
     : compact
       ? styles.infoPanelCompactResponsive
       : styles.infoPanelResponsive;
+  const teamLaneStyle = profile.lanes.team as ViewStyle;
+  const shopLaneStyle = profile.lanes.shop as ViewStyle;
 
   const handleSlotMeasure = (teamIndex: number, rect: SlotRect) => {
     setSlotRects((current) => {
@@ -175,9 +180,7 @@ export function GameScreen() {
       <View
         style={[
           styles.teamLane,
-          compact && styles.teamLaneCompact,
-          ultraCompact && styles.teamLaneUltraCompact,
-          narrow && styles.teamLaneNarrow,
+          teamLaneStyle,
         ]}
       >
         <TeamBoard
@@ -201,9 +204,7 @@ export function GameScreen() {
       <View
         style={[
           styles.shopLane,
-          compact && styles.shopLaneCompact,
-          ultraCompact && styles.shopLaneUltraCompact,
-          narrow && styles.shopLaneNarrow,
+          shopLaneStyle,
         ]}
       >
         <ShopRow
@@ -310,49 +311,13 @@ const styles = StyleSheet.create({
   },
   teamLane: {
     position: "absolute",
-    top: "34.2%",
-    left: "9.2%",
-    right: "29.5%",
-    height: "14.5%",
     justifyContent: "center",
     zIndex: 3,
-  },
-  teamLaneNarrow: {
-    left: "8.2%",
-    right: "28.4%",
-  },
-  teamLaneCompact: {
-    top: "33.6%",
-    height: "15%",
-  },
-  teamLaneUltraCompact: {
-    top: "33.2%",
-    left: "7.4%",
-    right: "27.8%",
-    height: "15.5%",
   },
   shopLane: {
     position: "absolute",
-    top: "63.4%",
-    left: "7.7%",
-    right: "34.2%",
-    height: "18.2%",
     justifyContent: "center",
     zIndex: 3,
-  },
-  shopLaneNarrow: {
-    left: "6.9%",
-    right: "32.8%",
-  },
-  shopLaneCompact: {
-    top: "62.6%",
-    height: "18.8%",
-  },
-  shopLaneUltraCompact: {
-    top: "61.8%",
-    left: "6.2%",
-    right: "31.7%",
-    height: "19.5%",
   },
   actionBarWrap: {
     position: "absolute",

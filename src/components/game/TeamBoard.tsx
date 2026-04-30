@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 
+import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { UnitInstance } from "../../domain/types";
 import { UnitCard } from "./UnitCard";
 
@@ -45,6 +46,9 @@ export function TeamBoard({
   onTeamDragEnd,
 }: TeamBoardProps) {
   const slotRefs = useRef<Array<View | null>>([]);
+  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
+  const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
+  const rowGap = profile.spacing.teamGap;
 
   const measureSlot = (index: number) => {
     const node = slotRefs.current[index];
@@ -70,7 +74,7 @@ export function TeamBoard({
   }, [compact, onSlotMeasure, team]);
 
   return (
-    <View style={[styles.row, compact && styles.rowCompact]}>
+    <View style={[styles.row, { gap: rowGap }]}>
       {team.map((unit, index) => (
         <TeamSlot
           key={unit?.instanceId ?? `empty-${index}`}
@@ -131,6 +135,8 @@ function TeamSlot({
 }: TeamSlotProps) {
   const draggingRef = useRef(false);
   const grantPointRef = useRef({ x: 0, y: 0 });
+  const profileKey = getHeroViewportProfile(compact ? 820 : 1000, compact ? 430 : 500);
+  const tokenConfig = HERO_LAYOUT_CONFIG.profiles[profileKey].tokens.team;
 
   const panResponder = useMemo(
     () =>
@@ -181,6 +187,13 @@ function TeamSlot({
     <View
       ref={slotRef}
       onLayout={() => onSlotMeasure(index)}
+      style={[
+        styles.slotFrame,
+        {
+          width: tokenConfig.width,
+          minHeight: tokenConfig.minHeight,
+        },
+      ]}
       {...(unit ? panResponder.panHandlers : {})}
     >
       <UnitCard
@@ -207,9 +220,10 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
   },
-  rowCompact: {
-    gap: 5,
+  slotFrame: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "visible",
   },
 });
