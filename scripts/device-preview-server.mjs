@@ -27,6 +27,13 @@ const presets = [
   { id: "galaxy-s24", label: "Galaxy S24", width: 780, height: 360, type: "phone" },
   { id: "pixel-9", label: "Pixel 9", width: 915, height: 412, type: "phone" },
   { id: "ipad-mini", label: "iPad Mini", width: 1133, height: 744, type: "tablet" },
+  { id: "iphone-15-pro-max-portrait", label: "iPhone 15 Pro Max Portrait", width: 430, height: 932, type: "phone" },
+  { id: "iphone-15-portrait", label: "iPhone 15 Portrait", width: 393, height: 852, type: "phone" },
+  { id: "galaxy-s24-portrait", label: "Galaxy S24 Portrait", width: 360, height: 780, type: "phone" },
+  { id: "pixel-9-portrait", label: "Pixel 9 Portrait", width: 412, height: 915, type: "phone" },
+  { id: "ipad-mini-portrait", label: "iPad Mini Portrait", width: 744, height: 1133, type: "tablet" },
+  { id: "portrait-9-16", label: "9:16 Portrait", width: 360, height: 640, type: "generic" },
+  { id: "portrait-3-4", label: "3:4 Portrait", width: 480, height: 640, type: "generic" },
   { id: "landscape-16-9", label: "16:9 Landscape", width: 640, height: 360, type: "generic" },
   { id: "landscape-4-3", label: "4:3 Landscape", width: 640, height: 480, type: "generic" },
 ];

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Image, ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+﻿import { useMemo, useState } from "react";
+import { ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { ViewStyle } from "react-native";
 
 import { ActionBar } from "../components/game/ActionBar";
@@ -14,9 +14,8 @@ import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../constants/heroLay
 import type { ShopSlot, UnitInstance } from "../domain/types";
 import { useGameStore } from "../stores/gameStore";
 
-const EMPTY_BATTLE_SUMMARY = "Боя еще не было. Собери стартовый отряд и проверь темп.";
+const EMPTY_BATTLE_SUMMARY = "Р‘РѕСЏ РµС‰Рµ РЅРµ Р±С‹Р»Рѕ. РЎРѕР±РµСЂРё СЃС‚Р°СЂС‚РѕРІС‹Р№ РѕС‚СЂСЏРґ Рё РїСЂРѕРІРµСЂСЊ С‚РµРјРї.";
 const BATTLEFIELD_BACKGROUND = require("../../assets/backgrounds/20260429_191654.jpeg");
-const LEFT_SHOP_DECOR = require("../../assets/f76bb0f8-d20d-4414-87f8-702c77d2b428.png");
 
 interface SlotRect {
   x: number;
@@ -160,24 +159,24 @@ export function GameScreen() {
 
   const hintContent: Record<TopBarStatKey, { title: string; text: string }> = {
     gold: {
-      title: "Золото",
-      text: "Тратится на действия в магазине: покупка юнита стоит 3, реролл стоит 1. В начале каждого хода золото обновляется.",
+      title: "Р—РѕР»РѕС‚Рѕ",
+      text: "РўСЂР°С‚РёС‚СЃСЏ РЅР° РґРµР№СЃС‚РІРёСЏ РІ РјР°РіР°Р·РёРЅРµ: РїРѕРєСѓРїРєР° СЋРЅРёС‚Р° СЃС‚РѕРёС‚ 3, СЂРµСЂРѕР»Р» СЃС‚РѕРёС‚ 1. Р’ РЅР°С‡Р°Р»Рµ РєР°Р¶РґРѕРіРѕ С…РѕРґР° Р·РѕР»РѕС‚Рѕ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ.",
     },
     lives: {
-      title: "Жизни",
-      text: "Это запас поражений. Проиграл бой — теряешь 1 жизнь. Когда жизни заканчиваются, забег проигран.",
+      title: "Р–РёР·РЅРё",
+      text: "Р­С‚Рѕ Р·Р°РїР°СЃ РїРѕСЂР°Р¶РµРЅРёР№. РџСЂРѕРёРіСЂР°Р» Р±РѕР№ вЂ” С‚РµСЂСЏРµС€СЊ 1 Р¶РёР·РЅСЊ. РљРѕРіРґР° Р¶РёР·РЅРё Р·Р°РєР°РЅС‡РёРІР°СЋС‚СЃСЏ, Р·Р°Р±РµРі РїСЂРѕРёРіСЂР°РЅ.",
     },
     turn: {
-      title: "Ход",
-      text: "Номер текущего раунда. С ростом хода открываются более сильные тиры юнитов в магазине.",
+      title: "РҐРѕРґ",
+      text: "РќРѕРјРµСЂ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°. РЎ СЂРѕСЃС‚РѕРј С…РѕРґР° РѕС‚РєСЂС‹РІР°СЋС‚СЃСЏ Р±РѕР»РµРµ СЃРёР»СЊРЅС‹Рµ С‚РёСЂС‹ СЋРЅРёС‚РѕРІ РІ РјР°РіР°Р·РёРЅРµ.",
     },
     wins: {
-      title: "Победы",
-      text: "Сколько боёв ты выиграл в этом забеге. Цель MVP-режима — дойти до 10 побед.",
+      title: "РџРѕР±РµРґС‹",
+      text: "РЎРєРѕР»СЊРєРѕ Р±РѕС‘РІ С‚С‹ РІС‹РёРіСЂР°Р» РІ СЌС‚РѕРј Р·Р°Р±РµРіРµ. Р¦РµР»СЊ MVP-СЂРµР¶РёРјР° вЂ” РґРѕР№С‚Рё РґРѕ 10 РїРѕР±РµРґ.",
     },
     tier: {
-      title: "Тир магазина",
-      text: "Максимальный тир юнитов, который может появиться в магазине на текущем ходу.",
+      title: "РўРёСЂ РјР°РіР°Р·РёРЅР°",
+      text: "РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ С‚РёСЂ СЋРЅРёС‚РѕРІ, РєРѕС‚РѕСЂС‹Р№ РјРѕР¶РµС‚ РїРѕСЏРІРёС‚СЊСЃСЏ РІ РјР°РіР°Р·РёРЅРµ РЅР° С‚РµРєСѓС‰РµРј С…РѕРґСѓ.",
     },
   };
 
@@ -257,14 +256,7 @@ export function GameScreen() {
           onTouchDragMove={handleTouchDragMove}
           onTouchDragEnd={handleTouchDragEnd}
         />
-      </View>
-
-      <Image
-        source={LEFT_SHOP_DECOR}
-        style={[styles.leftShopDecor, compact && styles.leftShopDecorCompact]}
-        resizeMode="contain"
-      />
-
+      </View>`r`n
       <View style={[styles.actionBarWrap, compact && styles.actionBarWrapCompact, ultraCompact && styles.actionBarWrapUltraCompact]}>
         <ActionBar
           onRoll={state.rollShop}
@@ -413,21 +405,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 3,
   },
-  leftShopDecor: {
-    position: "absolute",
-    left: "9.1%",
-    top: "56.8%",
-    width: 305,
-    height: 305,
-    zIndex: 3,
-    pointerEvents: "none",
-  },
-  leftShopDecorCompact: {
-    left: "0%",
-    top: "30%",
-    width: 260,
-    height: 260,
-  },
   actionBarWrap: {
     position: "absolute",
     left: "1.9%",
@@ -455,3 +432,4 @@ const styles = StyleSheet.create({
     width: 112,
   },
 });
+

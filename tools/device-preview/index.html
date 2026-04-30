@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -239,8 +239,8 @@
       <aside class="sidebar">
         <h1>Device Preview</h1>
         <p class="hint">
-          Локальная обертка для `localhost`-превью. Удобна для `Expo Web`, обычных React-приложений и любой страницы,
-          которую хочется проверять как телефон в landscape.
+          Р›РѕРєР°Р»СЊРЅР°СЏ РѕР±РµСЂС‚РєР° РґР»СЏ `localhost`-РїСЂРµРІСЊСЋ. РЈРґРѕР±РЅР° РґР»СЏ `Expo Web`, РѕР±С‹С‡РЅС‹С… React-РїСЂРёР»РѕР¶РµРЅРёР№ Рё Р»СЋР±РѕР№ СЃС‚СЂР°РЅРёС†С‹,
+          РєРѕС‚РѕСЂСѓСЋ С…РѕС‡РµС‚СЃСЏ РїСЂРѕРІРµСЂСЏС‚СЊ РєР°Рє С‚РµР»РµС„РѕРЅ РІ landscape and portrait.
         </p>
 
         <section class="panel">
@@ -281,8 +281,8 @@
           </div>
 
           <p class="status">
-            Подходит для проверки layout, safe-area отступов, ширины кнопок и поведения экрана на разных мобильных
-            размерах без внешнего сервиса.
+            РџРѕРґС…РѕРґРёС‚ РґР»СЏ РїСЂРѕРІРµСЂРєРё layout, safe-area РѕС‚СЃС‚СѓРїРѕРІ, С€РёСЂРёРЅС‹ РєРЅРѕРїРѕРє Рё РїРѕРІРµРґРµРЅРёСЏ СЌРєСЂР°РЅР° РЅР° СЂР°Р·РЅС‹С… РјРѕР±РёР»СЊРЅС‹С…
+            СЂР°Р·РјРµСЂР°С… Р±РµР· РІРЅРµС€РЅРµРіРѕ СЃРµСЂРІРёСЃР°.
           </p>
         </section>
 
@@ -290,13 +290,13 @@
           <div class="field">
             <label>Recommended presets</label>
             <div class="hint small">
-              `iPhone 15 Pro Max`, `iPhone 15`, `Galaxy S24`, `Pixel 9`, `iPad Mini`, `16:9 Landscape`
+              `iPhone 15 Pro Max`, `iPhone 15`, `Galaxy S24`, `Pixel 9`, `iPad Mini`, `16:9 Landscape`, `9:16 Portrait`
             </div>
           </div>
           <div class="field">
             <label>Typical Expo flow</label>
             <div class="hint small">
-              Сначала запусти `npm run web`, потом подними этот preview и направь его на адрес Expo, например
+              РЎРЅР°С‡Р°Р»Р° Р·Р°РїСѓСЃС‚Рё `npm run web`, РїРѕС‚РѕРј РїРѕРґРЅРёРјРё СЌС‚РѕС‚ preview Рё РЅР°РїСЂР°РІСЊ РµРіРѕ РЅР° Р°РґСЂРµСЃ Expo, РЅР°РїСЂРёРјРµСЂ
               `http://localhost:8082`.
             </div>
           </div>
@@ -305,7 +305,7 @@
 
       <main class="preview-area">
         <header class="header">
-          <h1>Landscape Device Sandbox</h1>
+          <h1>Device Sandbox</h1>
           <div class="hint" id="activeMeta"></div>
         </header>
 
@@ -366,7 +366,7 @@
 
         widthValue.textContent = width;
         heightValue.textContent = height;
-        activeMeta.textContent = `${currentPreset.label}${isRotated ? " rotated" : ""} · ${width} x ${height} · ${Math.round(scale * 100)}% visible`;
+        activeMeta.textContent = `${currentPreset.label}${isRotated ? " rotated" : ""} В· ${width} x ${height} В· ${Math.round(scale * 100)}% visible`;
 
         viewport.style.width = `${Math.round(width * scale)}px`;
         viewport.style.height = `${Math.round(height * scale)}px`;
@@ -410,3 +410,4 @@
     </script>
   </body>
 </html>
+
