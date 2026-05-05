@@ -2,19 +2,19 @@ import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { getUnitSprite } from "../../data/unitSprites";
-import type { ShopSlot, UnitInstance } from "../../domain/types";
+import type { BattleViewUnit, ShopSlot, UnitInstance } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
 import { useFlashOnChange } from "../ui/useFlashOnChange";
 
 interface InfoPanelProps {
-  selected: UnitInstance | ShopSlot | null;
-  battleSummary: string;
+  selected: UnitInstance | ShopSlot | BattleViewUnit | null;
+  notes?: string[];
   onSellSelected?: () => void;
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export function InfoPanel({ selected, battleSummary, onSellSelected, compact, style }: InfoPanelProps) {
+export function InfoPanel({ selected, notes = [], onSellSelected, compact, style }: InfoPanelProps) {
   const unit = selected ? ("unit" in selected ? selected.unit : selected) : null;
   const canSell = Boolean(onSellSelected && selected && !("unit" in selected));
   const tempAtk = unit ? (unit as Partial<UnitInstance>).temporaryAttack ?? 0 : 0;
@@ -33,24 +33,34 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
               resizeMode="contain"
             />
             <View style={styles.headerTextCol}>
-              <Text style={[styles.name, compact && styles.nameCompact]}>{unit.name}</Text>
-              <View style={styles.metaRow}>
-                <Text style={[styles.meta, compact && styles.metaCompact]}>T{unit.tier}</Text>
-                <View style={styles.metaStat}>
-                  <SpriteIcon icon="attack" size={compact ? 20 : 26} />
-                  <FlashingMeta value={displayAttack} compact={compact} highlightOnMount={tempAtk > 0} />
-                </View>
-                <View style={styles.metaStat}>
-                  <SpriteIcon icon="health" size={compact ? 20 : 26} />
-                  <FlashingMeta value={displayHealth} compact={compact} highlightOnMount={tempHp > 0} />
-                </View>
-              </View>
+              <Text
+                style={[styles.name, compact && styles.nameCompact]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.55}
+              >
+                {unit.name}
+              </Text>
             </View>
             <View style={styles.tierCoin}>
               <Text style={[styles.tierCoinText, compact && styles.tierCoinTextCompact]}>{unit.tier}</Text>
             </View>
           </View>
+
+          <View style={styles.metaRow}>
+            <Text style={[styles.meta, compact && styles.metaCompact]}>T{unit.tier}</Text>
+            <View style={styles.metaStat}>
+              <SpriteIcon icon="attack" size={compact ? 20 : 26} />
+              <FlashingMeta value={displayAttack} compact={compact} highlightOnMount={tempAtk > 0} />
+            </View>
+            <View style={styles.metaStat}>
+              <SpriteIcon icon="health" size={compact ? 20 : 26} />
+              <FlashingMeta value={displayHealth} compact={compact} highlightOnMount={tempHp > 0} />
+            </View>
+          </View>
+
           <Text style={[styles.ability, compact && styles.abilityCompact]}>{unit.ability}</Text>
+
           {canSell ? (
             <Pressable style={[styles.sellButton, compact && styles.sellButtonCompact]} onPress={onSellSelected}>
               <View style={styles.sellInner}>
@@ -64,14 +74,19 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
         <>
           <Text style={[styles.name, compact && styles.nameCompact]}>Подсказка</Text>
           <Text style={[styles.ability, compact && styles.abilityCompact]}>
-            Выбери героя из отряда или магазина. Здесь будет краткое описание выбранного юнита и его
-            способности.
+            Выбери героя из отряда или магазина. Здесь будет краткое описание выбранного юнита и его способности.
           </Text>
         </>
       )}
+
       <View style={styles.divider} />
-      <Text style={[styles.footerLabel, compact && styles.footerLabelCompact]}>Последний бой</Text>
-      <Text style={[styles.footerText, compact && styles.footerTextCompact]}>{battleSummary}</Text>
+      <View style={[styles.notesBox, compact && styles.notesBoxCompact]}>
+        {notes.map((note) => (
+          <Text key={note} style={[styles.footerText, compact && styles.footerTextCompact]}>
+            {note}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -106,9 +121,7 @@ function FlashingMeta({
           },
         ]}
       />
-      <Animated.Text
-        style={[styles.meta, compact && styles.metaCompact, { transform: [{ scale }] }]}
-      >
+      <Animated.Text style={[styles.meta, compact && styles.metaCompact, { transform: [{ scale }] }]}>
         {value}
       </Animated.Text>
     </View>
@@ -118,8 +131,6 @@ function FlashingMeta({
 const styles = StyleSheet.create({
   panel: {
     position: "absolute",
-    top: 0,
-    right: 8,
     width: 320,
     padding: 16,
     borderRadius: 18,
@@ -133,8 +144,6 @@ const styles = StyleSheet.create({
   },
   panelCompact: {
     width: 240,
-    top: -2,
-    right: 0,
     padding: 10,
     borderRadius: 14,
     borderWidth: 3,
@@ -146,11 +155,14 @@ const styles = StyleSheet.create({
   },
   headerTextCol: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
     gap: 10,
   },
   metaStat: {
@@ -176,12 +188,12 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   portrait: {
-    width: 58,
-    height: 58,
+    width: 87,
+    height: 87,
   },
   portraitCompact: {
-    width: 42,
-    height: 42,
+    width: 63,
+    height: 63,
   },
   name: {
     color: "#da5d14",
@@ -266,14 +278,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
-  footerLabel: {
-    color: "#7e623d",
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
+  notesBox: {
+    minHeight: 18,
   },
-  footerLabelCompact: {
-    fontSize: 9,
+  notesBoxCompact: {
+    minHeight: 13,
   },
   footerText: {
     color: "#1b1712",

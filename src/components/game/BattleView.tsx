@@ -13,9 +13,9 @@ import {
 
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
-import type { BattlePlayback, BattleViewUnit } from "../../domain/types";
-import { SpriteIcon } from "../ui/SpriteIcon";
-import { useFlashOnChange } from "../ui/useFlashOnChange";
+import type { BattleEffectEvent, BattlePlayback, BattleViewUnit } from "../../domain/types";
+import { InfoPanel } from "./InfoPanel";
+import { UnitStatsRow } from "./UnitStatsRow";
 
 const BATTLEFIELD_BACKGROUND = require("../../../assets/backgrounds/20260429_191654.jpeg");
 
@@ -32,6 +32,7 @@ type StepPhase = "idle" | "hit" | "resolve";
 
 export function BattleView({ playback, onComplete }: BattleViewProps) {
   const { width, height } = useWindowDimensions();
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [stepState, setStepState] = useState<{ index: number; phase: StepPhase }>({
     index: 0,
     phase: "idle",
@@ -243,9 +244,10 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
       }).start();
     }, Math.round(560 * speed));
 
+    const advanceDelay = isSob ? 1260 : Math.round(840 * speed);
     const advanceTimer = setTimeout(() => {
       setStepState((prev) => ({ index: prev.index + 1, phase: "idle" }));
-    }, Math.round(840 * speed));
+    }, advanceDelay);
 
     return () => {
       clearTimeout(engageTimer);
@@ -280,6 +282,12 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
 
   const playerFront = visibleTeams.player[0] ?? null;
   const enemyFront = visibleTeams.enemy[0] ?? null;
+  const selectedUnit =
+    [...visibleTeams.player, ...visibleTeams.enemy].find((unit) => unit.instanceId === selectedUnitId) ?? null;
+  const effectEventsByUnitId = useMemo(() => {
+    const events = currentStep?.kind === "sob" ? currentStep.events : [];
+    return groupBattleEffectEvents(events);
+  }, [currentStep, phase]);
 
   return (
     <ImageBackground source={BATTLEFIELD_BACKGROUND} resizeMode="cover" style={styles.screen} imageStyle={styles.bgImage}>
@@ -287,9 +295,6 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
 
       <View style={styles.topRow}>
         <Text style={styles.title}>Бой</Text>
-        <Pressable style={styles.skipButton} onPress={onComplete}>
-          <Text style={styles.skipText}>Пропустить</Text>
-        </Pressable>
       </View>
 
       <View
@@ -319,6 +324,8 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
           statsGap={statsGap}
           statsMarginTop={statsMarginTop}
           reflow={playerReflow}
+          onUnitPress={setSelectedUnitId}
+          effectEventsByUnitId={effectEventsByUnitId}
         />
 
         <TeamLine
@@ -340,6 +347,8 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
           statsGap={statsGap}
           statsMarginTop={statsMarginTop}
           reflow={enemyReflow}
+          onUnitPress={setSelectedUnitId}
+          effectEventsByUnitId={effectEventsByUnitId}
         />
 
         <View pointerEvents="none" style={styles.clashCenter}>
@@ -374,6 +383,19 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
         </View>
       </View>
 
+      {selectedUnit ? (
+        <InfoPanel
+          selected={selectedUnit}
+          notes={[]}
+          compact={profileKey !== "largePhone"}
+          style={[
+            styles.battleInfoPanel,
+            profileKey !== "largePhone" && styles.battleInfoPanelCompact,
+            profileKey === "smallPhone" && styles.battleInfoPanelUltraCompact,
+          ]}
+        />
+      ) : null}
+
       <View style={styles.footer}>
         <Text style={styles.summary}>{playback.result.summary}</Text>
       </View>
@@ -400,6 +422,8 @@ function TeamLine({
   statsGap,
   statsMarginTop,
   reflow,
+  onUnitPress,
+  effectEventsByUnitId,
 }: {
   units: BattleViewUnit[];
   side: "left" | "right";
@@ -419,6 +443,8 @@ function TeamLine({
   statsGap: number;
   statsMarginTop: number;
   reflow: Animated.Value;
+  onUnitPress: (unitId: string) => void;
+  effectEventsByUnitId: Record<string, BattleEffectEvent[]>;
 }) {
   const reflowDistance = tokenWidth + slotGap;
   const reflowX =
@@ -444,6 +470,7 @@ function TeamLine({
         {units.map((unit, index) => {
           const isFront = index === 0;
           const tuning = getUnitSpriteTuning(unit.spriteKey);
+          const effectLabel = formatBattleEffectLabel(effectEventsByUnitId[unit.instanceId] ?? []);
 
           let frontStyle: object | null = null;
           if (isFront) {
@@ -466,31 +493,37 @@ function TeamLine({
                 frontStyle,
               ]}
             >
-              <View style={[styles.spriteBody, { height: stageHeight }]}>
-                <View
-                  style={[
-                    styles.spriteAnchor,
-                    {
-                      width: spriteSize,
-                      height: spriteSize,
-                      marginLeft: -(spriteSize / 2),
-                      bottom: baselineBottom,
-                      transform: [
-                        { translateX: mirrored ? -tuning.offsetX : tuning.offsetX },
-                        { translateY: tuning.offsetY },
-                        { scaleX: mirrored ? -tuning.scale : tuning.scale },
-                        { scaleY: tuning.scale },
-                      ],
-                    },
-                  ]}
-                >
-                  <Image source={getUnitSprite(unit.spriteKey)} style={{ width: spriteSize, height: spriteSize }} resizeMode="contain" />
+              <Pressable style={styles.unitPressable} onPress={() => onUnitPress(unit.instanceId)}>
+                <View style={[styles.spriteBody, { height: stageHeight }]}>
+                  <View
+                    style={[
+                      styles.spriteAnchor,
+                      {
+                        width: spriteSize,
+                        height: spriteSize,
+                        marginLeft: -(spriteSize / 2),
+                        bottom: baselineBottom,
+                        transform: [
+                          { translateX: mirrored ? -tuning.offsetX : tuning.offsetX },
+                          { translateY: tuning.offsetY },
+                          { scaleX: mirrored ? -tuning.scale : tuning.scale },
+                          { scaleY: tuning.scale },
+                        ],
+                      },
+                    ]}
+                  >
+                    <Image source={getUnitSprite(unit.spriteKey)} style={{ width: spriteSize, height: spriteSize }} resizeMode="contain" />
+                  </View>
+                  {effectLabel ? <EffectFloatText label={`Старт боя: ${effectLabel}`} /> : null}
                 </View>
-              </View>
-              <View style={[styles.statsRow, { marginTop: statsMarginTop, gap: statsGap }]}>
-                <StatBadge icon="attack" value={unit.attack} />
-                <StatBadge icon="health" value={Math.max(0, unit.health)} />
-              </View>
+                <UnitStatsRow
+                  attack={unit.attack}
+                  health={Math.max(0, unit.health)}
+                  marginTop={statsMarginTop}
+                  gap={statsGap}
+                  size="battle"
+                />
+              </Pressable>
             </Animated.View>
           );
         })}
@@ -499,30 +532,72 @@ function TeamLine({
   );
 }
 
-function StatBadge({ icon, value }: { icon: "attack" | "health"; value: number }) {
-  const { scale, glow } = useFlashOnChange(value);
+function groupBattleEffectEvents(events: BattleEffectEvent[] | undefined) {
+  const grouped: Record<string, BattleEffectEvent[]> = {};
+
+  for (const event of events ?? []) {
+    grouped[event.targetInstanceId] = [...(grouped[event.targetInstanceId] ?? []), event];
+  }
+
+  return grouped;
+}
+
+function formatBattleEffectLabel(events: BattleEffectEvent[]) {
+  const attack = events.reduce((total, event) => total + event.attackDelta, 0);
+  const health = events.reduce((total, event) => total + event.healthDelta, 0);
+  const parts: string[] = [];
+
+  if (attack !== 0) {
+    parts.push(`${attack > 0 ? "+" : ""}${attack} атака`);
+  }
+  if (health !== 0) {
+    parts.push(`${health > 0 ? "+" : ""}${health} здоровье`);
+  }
+
+  return parts.join("  ");
+}
+
+function EffectFloatText({ label }: { label: string }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const lift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    opacity.setValue(0);
+    lift.setValue(0);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 100,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.delay(770),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 350,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(lift, {
+        toValue: 1,
+        duration: 1190,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [label, lift, opacity]);
+
+  const translateY = lift.interpolate({ inputRange: [0, 1], outputRange: [10, -10] });
+
   return (
-    <View style={styles.statBadge}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.statGlow,
-          {
-            opacity: glow,
-            transform: [
-              {
-                scale: glow.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.6, 1.3],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
-      <SpriteIcon icon={icon} size={26} />
-      <Animated.Text style={[styles.statText, { transform: [{ scale }] }]}>{value}</Animated.Text>
-    </View>
+    <Animated.Text
+      pointerEvents="none"
+      style={[styles.effectFloatText, { opacity, transform: [{ translateY }] }]}
+    >
+      {label}
+    </Animated.Text>
   );
 }
 
@@ -546,7 +621,7 @@ const styles = StyleSheet.create({
     right: "2%",
     zIndex: 3,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
   },
   title: {
@@ -554,19 +629,6 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "900",
     textTransform: "uppercase",
-  },
-  skipButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: "#1d1208",
-    backgroundColor: "#ffae2d",
-  },
-  skipText: {
-    color: "#4b2605",
-    fontWeight: "900",
-    fontSize: 16,
   },
   arena: {
     position: "absolute",
@@ -602,6 +664,10 @@ const styles = StyleSheet.create({
     gap: 1,
     overflow: "visible",
   },
+  unitPressable: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
   spriteBody: {
     width: "100%",
     position: "relative",
@@ -617,27 +683,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
   },
-  statBadge: {
-    width: 40,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statGlow: {
+  effectFloatText: {
     position: "absolute",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 215, 70, 0.85)",
-  },
-  statText: {
-    position: "absolute",
-    color: "#fff",
+    left: -42,
+    right: -42,
+    bottom: "45%",
+    color: "#fff6dd",
+    fontSize: 11,
     fontWeight: "900",
-    fontSize: 12,
-    textShadowColor: "rgba(0, 0, 0, 0.8)",
-    textShadowRadius: 2,
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.9)",
+    textShadowRadius: 3,
     textShadowOffset: { width: 0, height: 1 },
+    zIndex: 9,
   },
   clashCenter: {
     position: "absolute",
@@ -691,6 +749,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 245, 222, 0.95)",
     paddingVertical: 8,
     paddingHorizontal: 10,
+  },
+  battleInfoPanel: {
+    left: "2%",
+    bottom: "9.5%",
+    width: 320,
+    zIndex: 12,
+  },
+  battleInfoPanelCompact: {
+    bottom: "9%",
+    width: 250,
+  },
+  battleInfoPanelUltraCompact: {
+    bottom: "8.5%",
+    width: 220,
   },
   summary: {
     color: "#23160c",

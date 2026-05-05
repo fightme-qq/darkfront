@@ -34,12 +34,15 @@ function toPlayerViewUnits(team: Array<UnitInstance | null>): BattleViewUnit[] {
     .map((unit) => ({
       instanceId: unit.instanceId,
       blueprintId: unit.blueprintId,
+      name: unit.name,
       spriteKey: unit.spriteKey,
       attack: unit.attack + unit.temporaryAttack,
       health: unit.health + unit.temporaryHealth,
       tier: unit.tier,
+      ability: unit.ability,
       effects: unit.effects,
-    }));
+    }))
+    .reverse();
 }
 
 function buildEnemyTeam(
@@ -70,10 +73,12 @@ function buildEnemyTeam(
     enemy.push({
       instanceId: `enemy-${index}-${pickRoll.value}-${currentSeed}`,
       blueprintId: picked.id,
+      name: picked.name,
       spriteKey: picked.spriteKey,
       attack: picked.attack + statBonus,
       health: picked.health + statBonus,
       tier: picked.tier,
+      ability: picked.ability,
       effects: picked.effects,
     });
   }
@@ -106,6 +111,7 @@ function resolveBattleSteps(
       enemyAfter: cloneViewTeam(sobStep.after.enemy),
       playerFrontDamage: 0,
       enemyFrontDamage: 0,
+      events: sobStep.events,
     });
   }
 
@@ -162,6 +168,7 @@ function resolveBattleSteps(
       enemyAfter: cloneViewTeam(snapshot.enemy),
       playerFrontDamage,
       enemyFrontDamage,
+      events: [],
     });
   }
 

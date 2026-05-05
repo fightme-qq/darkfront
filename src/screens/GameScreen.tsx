@@ -14,7 +14,6 @@ import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../constants/heroLay
 import type { ShopSlot, UnitInstance } from "../domain/types";
 import { useGameStore } from "../stores/gameStore";
 
-const EMPTY_BATTLE_SUMMARY = "Боя еще не было. Собери стартовый отряд и проверь темп.";
 const BATTLEFIELD_BACKGROUND = require("../../assets/backgrounds/20260429_191654.jpeg");
 
 interface SlotRect {
@@ -32,6 +31,7 @@ export function GameScreen() {
   const selected = selectedTeam ?? selectedShop;
   const selectedIndex = state.team.findIndex((unit) => unit?.instanceId === state.selectedId);
   const selectedShopIndex = state.shop.findIndex((slot) => slot.slotId === state.selectedId && slot.unit);
+  const selectedNotes = selectedTeam ? formatEffectNotes(state.effectNotesByUnitId[selectedTeam.instanceId]) : [];
   const canFreeze = selectedShopIndex >= 0;
   const showPlacementHints = selectedShopIndex >= 0;
   const [slotRects, setSlotRects] = useState<Record<number, SlotRect>>({});
@@ -219,7 +219,7 @@ export function GameScreen() {
 
       <InfoPanel
         selected={selected}
-        battleSummary={state.battleResult?.summary ?? EMPTY_BATTLE_SUMMARY}
+        notes={selectedNotes}
         onSellSelected={selectedIndex >= 0 ? () => state.sellUnit(selectedIndex) : undefined}
         compact={compact}
         style={infoPanelStyle}
@@ -303,6 +303,25 @@ function findSlotIndexAtPoint(x: number, y: number, slotRects: Record<number, Sl
   });
 
   return found ? Number(found[0]) : null;
+}
+
+function formatEffectNotes(
+  notesBySource: Record<string, { sourceName: string; attack: number; health: number }> | undefined,
+) {
+  if (!notesBySource) {
+    return [];
+  }
+
+  return Object.values(notesBySource).flatMap((note) => {
+    const parts: string[] = [];
+    if (note.attack > 0) {
+      parts.push(`+${note.attack} атаки от ${note.sourceName}`);
+    }
+    if (note.health > 0) {
+      parts.push(`+${note.health} здоровья от ${note.sourceName}`);
+    }
+    return parts;
+  });
 }
 
 const styles = StyleSheet.create({
@@ -441,4 +460,3 @@ const styles = StyleSheet.create({
     width: 112,
   },
 });
-

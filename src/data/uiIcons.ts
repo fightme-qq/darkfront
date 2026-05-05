@@ -34,3 +34,11 @@ export const UI_ICONS: Record<UiIconKey, { tileX: number; tileY: number }> = {
   freeze: { tileX: 0, tileY: 68 },
   endTurn: { tileX: 10, tileY: 2 },
 };
+
+export const UI_ICON_IMAGES: Partial<Record<UiIconKey, number>> = {
+  gold: require("../../assets/icons/gold-coin.png"),
+  lives: require("../../assets/icons/heart-red.png"),
+  wins: require("../../assets/icons/wins-trophy.png"),
+  attack: require("../../assets/icons/attack-crossed-swords.png"),
+  health: require("../../assets/icons/heart-red.png"),
+};

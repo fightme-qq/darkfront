@@ -1,6 +1,12 @@
 import { Image, StyleSheet, View } from "react-native";
 
-import { UI_ICON_ATLAS, UI_ICON_ATLAS_SIZE, UI_ICONS, type UiIconKey } from "../../data/uiIcons";
+import {
+  UI_ICON_ATLAS,
+  UI_ICON_ATLAS_SIZE,
+  UI_ICON_IMAGES,
+  UI_ICONS,
+  type UiIconKey,
+} from "../../data/uiIcons";
 
 interface SpriteIconProps {
   icon: UiIconKey;
@@ -9,6 +15,17 @@ interface SpriteIconProps {
 }
 
 export function SpriteIcon({ icon, size = 20, trim = 1 }: SpriteIconProps) {
+  const standaloneIcon = UI_ICON_IMAGES[icon];
+  if (standaloneIcon) {
+    return (
+      <Image
+        source={standaloneIcon}
+        style={{ width: size, height: size }}
+        resizeMode="contain"
+      />
+    );
+  }
+
   const coords = UI_ICONS[icon];
   const visibleTileSize = UI_ICON_ATLAS_SIZE.tile - trim * 2;
   const scale = size / visibleTileSize;

@@ -88,11 +88,21 @@ export interface BattleResult {
 export interface BattleViewUnit {
   instanceId: string;
   blueprintId: string;
+  name: string;
   spriteKey: CharacterSpriteKey;
   attack: number;
   health: number;
   tier: number;
+  ability: string;
   effects: UnitEffect[];
+}
+
+export interface BattleEffectEvent {
+  sourceInstanceId: string;
+  sourceName: string;
+  targetInstanceId: string;
+  attackDelta: number;
+  healthDelta: number;
 }
 
 export interface BattleClashStep {
@@ -103,6 +113,7 @@ export interface BattleClashStep {
   enemyAfter: BattleViewUnit[];
   playerFrontDamage: number;
   enemyFrontDamage: number;
+  events: BattleEffectEvent[];
 }
 
 export interface BattlePlayback {

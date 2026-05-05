@@ -23,6 +23,7 @@ interface GameState {
   unitCounter: number;
   shopSlotCounter: number;
   pendingGoldNextTurn: number;
+  effectNotesByUnitId: Record<string, Record<string, { sourceName: string; attack: number; health: number }>>;
   endTurnSteps: EndTurnStep[];
   endTurnStepIndex: number;
   endTurnFinalTeam: Array<UnitInstance | null> | null;
@@ -77,6 +78,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   unitCounter: 1,
   shopSlotCounter: initialRoll.slotIdCounter,
   pendingGoldNextTurn: 0,
+  effectNotesByUnitId: {},
   endTurnSteps: [],
   endTurnStepIndex: 0,
   endTurnFinalTeam: null,
@@ -209,6 +211,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const eot = runEndTurnTriggersSteps(state.team);
+    const effectNotesByUnitId = addEndTurnEffectNotes(state.effectNotesByUnitId, eot.steps);
 
     if (eot.steps.length === 0) {
       const outcome = resolveBattlePlayback(eot.finalTeam, state.turn, state.seed, UNIT_BLUEPRINTS);
@@ -216,6 +219,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         phase: "battle",
         team: eot.finalTeam,
         pendingGoldNextTurn: state.pendingGoldNextTurn + eot.totalGold,
+        effectNotesByUnitId,
         selectedId: null,
         battlePlayback: outcome,
         battleResult: outcome.result,
@@ -231,6 +235,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       endTurnStepIndex: 0,
       endTurnFinalTeam: eot.finalTeam,
       endTurnPendingGold: eot.totalGold,
+      effectNotesByUnitId,
     });
   },
   advanceEndTurn: () => {
@@ -254,6 +259,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       phase: "battle",
       team: finalTeam,
       pendingGoldNextTurn: state.pendingGoldNextTurn + state.endTurnPendingGold,
+      effectNotesByUnitId: state.effectNotesByUnitId,
       battlePlayback: outcome,
       battleResult: outcome.result,
       endTurnSteps: [],
@@ -293,3 +299,29 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 }));
+
+function addEndTurnEffectNotes(
+  current: GameState["effectNotesByUnitId"],
+  steps: EndTurnStep[],
+): GameState["effectNotesByUnitId"] {
+  const next: GameState["effectNotesByUnitId"] = { ...current };
+
+  for (const step of steps) {
+    for (const event of step.events) {
+      const bySource = { ...(next[event.targetInstanceId] ?? {}) };
+      const existing = bySource[event.sourceInstanceId] ?? {
+        sourceName: event.sourceName,
+        attack: 0,
+        health: 0,
+      };
+      bySource[event.sourceInstanceId] = {
+        sourceName: event.sourceName,
+        attack: existing.attack + event.attackDelta,
+        health: existing.health + event.healthDelta,
+      };
+      next[event.targetInstanceId] = bySource;
+    }
+  }
+
+  return next;
+}

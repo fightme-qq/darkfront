@@ -1,5 +1,6 @@
 import { nextInt } from "./rng";
 import type {
+  BattleEffectEvent,
   BattleViewUnit,
   EffectAction,
   TargetSelector,
@@ -65,14 +66,14 @@ function pickShopTargets(
     case "self":
       return team[sourceIndex] ? [sourceIndex] : [];
     case "nearestBehind": {
-      for (let i = sourceIndex + 1; i < team.length; i += 1) {
+      for (let i = sourceIndex - 1; i >= 0; i -= 1) {
         if (team[i]) return [i];
       }
       return [];
     }
     case "frontAlly": {
-      for (let i = 0; i < team.length; i += 1) {
-        if (i !== sourceIndex && team[i]) return [i];
+      for (let i = sourceIndex + 1; i < team.length; i += 1) {
+        if (team[i]) return [i];
       }
       return [];
     }
@@ -131,6 +132,15 @@ export interface EndTurnStep {
   team: Array<UnitInstance | null>;
   goldDelta: number;
   sourceInstanceId: string;
+  events: EndTurnEffectEvent[];
+}
+
+export interface EndTurnEffectEvent {
+  sourceInstanceId: string;
+  sourceName: string;
+  targetInstanceId: string;
+  attackDelta: number;
+  healthDelta: number;
 }
 
 export function runEndTurnTriggersSteps(team: Array<UnitInstance | null>): {
@@ -158,12 +168,37 @@ export function runEndTurnTriggersSteps(team: Array<UnitInstance | null>): {
       const result = fireShopEffect(effect, sourceIndex, current);
       const changed = result.team !== current || result.goldDelta !== 0;
       if (!changed) continue;
+      const events: EndTurnEffectEvent[] = [];
+
+      result.team.forEach((nextUnit, index) => {
+        const previousUnit = current[index];
+        if (!previousUnit || !nextUnit || previousUnit.instanceId !== nextUnit.instanceId) {
+          return;
+        }
+
+        const attackDelta =
+          nextUnit.attack + nextUnit.temporaryAttack - (previousUnit.attack + previousUnit.temporaryAttack);
+        const healthDelta =
+          nextUnit.health + nextUnit.temporaryHealth - (previousUnit.health + previousUnit.temporaryHealth);
+
+        if ((attackDelta !== 0 || healthDelta !== 0) && nextUnit.instanceId !== sourceId) {
+          events.push({
+            sourceInstanceId: sourceId,
+            sourceName: source.name,
+            targetInstanceId: nextUnit.instanceId,
+            attackDelta,
+            healthDelta,
+          });
+        }
+      });
+
       current = result.team;
       totalGold += result.goldDelta;
       steps.push({
         team: cloneInstanceTeam(current),
         goldDelta: result.goldDelta,
         sourceInstanceId: sourceId,
+        events,
       });
     }
   }
@@ -272,6 +307,7 @@ function cleanupDead(snapshot: BattleSnapshot): BattleSnapshot {
 export interface SobStep {
   before: BattleSnapshot;
   after: BattleSnapshot;
+  events: BattleEffectEvent[];
 }
 
 function snapshotsEqual(a: BattleSnapshot, b: BattleSnapshot): boolean {
@@ -296,6 +332,40 @@ function cloneSnapshot(s: BattleSnapshot): BattleSnapshot {
     enemy: s.enemy.map((u) => ({ ...u })),
     seed: s.seed,
   };
+}
+
+function getBattleUnitDeltaEvents(
+  before: BattleSnapshot,
+  after: BattleSnapshot,
+  source: BattleViewUnit,
+): BattleEffectEvent[] {
+  const events: BattleEffectEvent[] = [];
+  const beforeUnits = [...before.player, ...before.enemy];
+  const afterUnits = [...after.player, ...after.enemy];
+
+  for (const nextUnit of afterUnits) {
+    const previousUnit = beforeUnits.find((unit) => unit.instanceId === nextUnit.instanceId);
+    if (!previousUnit) {
+      continue;
+    }
+
+    const attackDelta = nextUnit.attack - previousUnit.attack;
+    const healthDelta = nextUnit.health - previousUnit.health;
+
+    if (attackDelta === 0 && healthDelta === 0) {
+      continue;
+    }
+
+    events.push({
+      sourceInstanceId: source.instanceId,
+      sourceName: source.name,
+      targetInstanceId: nextUnit.instanceId,
+      attackDelta,
+      healthDelta,
+    });
+  }
+
+  return events;
 }
 
 export function runStartOfBattleSteps(snapshot: BattleSnapshot): {
@@ -329,7 +399,11 @@ export function runStartOfBattleSteps(snapshot: BattleSnapshot): {
 
       if (snapshotsEqual(before, next)) continue;
       current = next;
-      steps.push({ before, after: cloneSnapshot(current) });
+      steps.push({
+        before,
+        after: cloneSnapshot(current),
+        events: getBattleUnitDeltaEvents(before, current, unit),
+      });
     }
   }
 

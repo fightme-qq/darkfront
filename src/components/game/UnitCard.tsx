@@ -15,7 +15,7 @@ import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/hero
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
-import { useFlashOnChange } from "../ui/useFlashOnChange";
+import { UnitStatsRow } from "./UnitStatsRow";
 
 const webInteractiveStyle =
   Platform.OS === "web"
@@ -231,53 +231,15 @@ function StatsRow({
   config: { marginTop: number; gap: number };
 }) {
   return (
-    <View style={[styles.statsRow, { marginTop: config.marginTop, gap: config.gap }]}>
-      <StatBadge icon="attack" value={attack} compact={compact} highlightOnMount={tempAttack > 0} />
-      <StatBadge icon="health" value={health} compact={compact} highlightOnMount={tempHealth > 0} />
-    </View>
-  );
-}
-
-function StatBadge({
-  icon,
-  value,
-  compact,
-  highlightOnMount,
-}: {
-  icon: "attack" | "health";
-  value: number;
-  compact?: boolean;
-  highlightOnMount?: boolean;
-}) {
-  const { scale, glow } = useFlashOnChange(value, highlightOnMount);
-
-  return (
-    <View style={[styles.statBadge, compact && styles.statBadgeCompact]}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.statGlow,
-          compact && styles.statGlowCompact,
-          {
-            opacity: glow,
-            transform: [
-              {
-                scale: glow.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.6, 1.4],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
-      <SpriteIcon icon={icon} size={compact ? 26 : 34} trim={1} />
-      <Animated.Text
-        style={[styles.statValue, compact && styles.statValueCompact, { transform: [{ scale }] }]}
-      >
-        {value}
-      </Animated.Text>
-    </View>
+    <UnitStatsRow
+      attack={attack}
+      health={health}
+      attackHighlight={tempAttack > 0}
+      healthHighlight={tempHealth > 0}
+      marginTop={config.marginTop}
+      gap={config.gap}
+      size={compact ? "compact" : "normal"}
+    />
   );
 }
 
@@ -492,46 +454,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   tierChipTextCompact: {
-    fontSize: 10,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statBadge: {
-    width: 34,
-    height: 34,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  statBadgeCompact: {
-    width: 26,
-    height: 26,
-  },
-  statGlow: {
-    position: "absolute",
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 215, 70, 0.85)",
-  },
-  statGlowCompact: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  statValue: {
-    position: "absolute",
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "900",
-    textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.72)",
-    textShadowRadius: 3,
-    textShadowOffset: { width: 0, height: 1 },
-  },
-  statValueCompact: {
     fontSize: 10,
   },
 });
