@@ -2,7 +2,7 @@
   "expo": {
     "name": "Darkfront: Last Stand",
     "slug": "darkfront-last-stand",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "landscape",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -11,11 +11,14 @@
       "backgroundColor": "#10131a"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "2"
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 2,
+      "package": "com.atata11.darkfrontlaststand"
     },
     "web": {
       "bundler": "metro"

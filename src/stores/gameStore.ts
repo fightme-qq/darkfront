@@ -3,11 +3,12 @@ import { create } from "zustand";
 import { GAME_CONFIG } from "../constants/gameConfig";
 import { UNIT_BLUEPRINTS } from "../data/units";
 import { resolveBattlePlayback } from "../domain/battle";
+import { runEndTurnTriggersSteps, runShopTrigger, type EndTurnStep } from "../domain/effects";
 import { createUnitInstanceId, getShopTier, rollShop } from "../domain/shop";
 import type { BattlePlayback, BattleResult, ShopSlot, UnitBlueprint, UnitInstance } from "../domain/types";
 
 interface GameState {
-  phase: "shop" | "battle";
+  phase: "shop" | "endTurn" | "battle";
   turn: number;
   gold: number;
   lives: number;
@@ -21,6 +22,11 @@ interface GameState {
   battlePlayback: BattlePlayback | null;
   unitCounter: number;
   shopSlotCounter: number;
+  pendingGoldNextTurn: number;
+  endTurnSteps: EndTurnStep[];
+  endTurnStepIndex: number;
+  endTurnFinalTeam: Array<UnitInstance | null> | null;
+  endTurnPendingGold: number;
   rollShop: () => void;
   buyUnit: (shopIndex: number) => void;
   buyUnitToSlot: (shopIndex: number, teamIndex: number) => void;
@@ -29,6 +35,7 @@ interface GameState {
   sellUnit: (teamIndex: number) => void;
   selectEntity: (id: string | null) => void;
   startBattle: () => void;
+  advanceEndTurn: () => void;
   finishBattle: () => void;
 }
 
@@ -40,12 +47,15 @@ function createInstance(unit: UnitBlueprint, counter: number): UnitInstance {
     tier: unit.tier,
     attack: unit.attack,
     health: unit.health,
+    temporaryAttack: 0,
+    temporaryHealth: 0,
     level: 1,
     experience: 0,
     accent: unit.accent,
     spriteKey: unit.spriteKey,
     tags: unit.tags,
     ability: unit.ability,
+    effects: unit.effects,
   };
 }
 
@@ -66,6 +76,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   battlePlayback: null,
   unitCounter: 1,
   shopSlotCounter: initialRoll.slotIdCounter,
+  pendingGoldNextTurn: 0,
+  endTurnSteps: [],
+  endTurnStepIndex: 0,
+  endTurnFinalTeam: null,
+  endTurnPendingGold: 0,
   rollShop: () => {
     const state = get();
     if (state.phase !== "shop" || state.gold < GAME_CONFIG.rollCost) {
@@ -92,18 +107,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const nextTeam = [...state.team];
-    nextTeam[openIndex] = createInstance(slot.unit, state.unitCounter);
+    const placedTeam = [...state.team];
+    placedTeam[openIndex] = createInstance(slot.unit, state.unitCounter);
+    const buyResult = runShopTrigger("buy", openIndex, placedTeam);
     const nextShop = [...state.shop];
     nextShop[shopIndex] = { ...slot, unit: null, frozen: false };
     set({
       gold: state.gold - GAME_CONFIG.buyCost,
-      team: nextTeam,
+      team: buyResult.team,
       shop: nextShop,
       seed: state.seed,
       unitCounter: state.unitCounter + 1,
       shopSlotCounter: state.shopSlotCounter,
-      selectedId: nextTeam[openIndex]?.instanceId ?? null,
+      selectedId: buyResult.team[openIndex]?.instanceId ?? null,
+      pendingGoldNextTurn: state.pendingGoldNextTurn + buyResult.pendingGoldDelta,
     });
   },
   buyUnitToSlot: (shopIndex, teamIndex) => {
@@ -116,18 +133,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const nextTeam = [...state.team];
-    nextTeam[teamIndex] = createInstance(slot.unit, state.unitCounter);
+    const placedTeam = [...state.team];
+    placedTeam[teamIndex] = createInstance(slot.unit, state.unitCounter);
+    const buyResult = runShopTrigger("buy", teamIndex, placedTeam);
     const nextShop = [...state.shop];
     nextShop[shopIndex] = { ...slot, unit: null, frozen: false };
     set({
       gold: state.gold - GAME_CONFIG.buyCost,
-      team: nextTeam,
+      team: buyResult.team,
       shop: nextShop,
       seed: state.seed,
       unitCounter: state.unitCounter + 1,
       shopSlotCounter: state.shopSlotCounter,
-      selectedId: nextTeam[teamIndex]?.instanceId ?? null,
+      selectedId: buyResult.team[teamIndex]?.instanceId ?? null,
+      pendingGoldNextTurn: state.pendingGoldNextTurn + buyResult.pendingGoldDelta,
     });
   },
   moveUnit: (fromIndex, toIndex) => {
@@ -172,12 +191,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const nextTeam = [...state.team];
+    const sellResult = runShopTrigger("sell", teamIndex, state.team);
+    const nextTeam = [...sellResult.team];
     nextTeam[teamIndex] = null;
     set({
       team: nextTeam,
       gold: Math.min(state.gold + 1, 99),
       selectedId: null,
+      pendingGoldNextTurn: state.pendingGoldNextTurn + sellResult.pendingGoldDelta,
     });
   },
   selectEntity: (id) => set({ selectedId: id }),
@@ -187,12 +208,58 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const outcome = resolveBattlePlayback(state.team, state.turn, state.seed, UNIT_BLUEPRINTS);
+    const eot = runEndTurnTriggersSteps(state.team);
+
+    if (eot.steps.length === 0) {
+      const outcome = resolveBattlePlayback(eot.finalTeam, state.turn, state.seed, UNIT_BLUEPRINTS);
+      set({
+        phase: "battle",
+        team: eot.finalTeam,
+        pendingGoldNextTurn: state.pendingGoldNextTurn + eot.totalGold,
+        selectedId: null,
+        battlePlayback: outcome,
+        battleResult: outcome.result,
+      });
+      return;
+    }
+
+    set({
+      phase: "endTurn",
+      team: eot.steps[0].team,
+      selectedId: null,
+      endTurnSteps: eot.steps,
+      endTurnStepIndex: 0,
+      endTurnFinalTeam: eot.finalTeam,
+      endTurnPendingGold: eot.totalGold,
+    });
+  },
+  advanceEndTurn: () => {
+    const state = get();
+    if (state.phase !== "endTurn") {
+      return;
+    }
+
+    const nextIndex = state.endTurnStepIndex + 1;
+    if (nextIndex < state.endTurnSteps.length) {
+      set({
+        endTurnStepIndex: nextIndex,
+        team: state.endTurnSteps[nextIndex].team,
+      });
+      return;
+    }
+
+    const finalTeam = state.endTurnFinalTeam ?? state.team;
+    const outcome = resolveBattlePlayback(finalTeam, state.turn, state.seed, UNIT_BLUEPRINTS);
     set({
       phase: "battle",
-      selectedId: null,
+      team: finalTeam,
+      pendingGoldNextTurn: state.pendingGoldNextTurn + state.endTurnPendingGold,
       battlePlayback: outcome,
       battleResult: outcome.result,
+      endTurnSteps: [],
+      endTurnStepIndex: 0,
+      endTurnFinalTeam: null,
+      endTurnPendingGold: 0,
     });
   },
   finishBattle: () => {
@@ -206,17 +273,23 @@ export const useGameStore = create<GameState>((set, get) => ({
     const nextLives = state.lives - (state.battlePlayback.result.outcome === "loss" ? 1 : 0);
     const rerolled = rollShop(state.battlePlayback.seed, UNIT_BLUEPRINTS, nextTurn, state.shop, state.shopSlotCounter);
 
+    const resetTeam = state.team.map((unit) =>
+      unit ? { ...unit, temporaryAttack: 0, temporaryHealth: 0 } : null,
+    );
+
     set({
       phase: "shop",
       seed: rerolled.seed,
       turn: nextTurn,
-      gold: GAME_CONFIG.startingGold,
+      gold: GAME_CONFIG.startingGold + state.pendingGoldNextTurn,
       wins: nextWins,
       lives: nextLives,
       shopTier: getShopTier(nextTurn),
       shop: rerolled.slots.map((slot) => ({ ...slot, frozen: false })),
       battlePlayback: null,
       shopSlotCounter: rerolled.slotIdCounter,
+      team: resetTeam,
+      pendingGoldNextTurn: 0,
     });
   },
 }));

@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { ViewStyle } from "react-native";
 
@@ -14,7 +14,7 @@ import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../constants/heroLay
 import type { ShopSlot, UnitInstance } from "../domain/types";
 import { useGameStore } from "../stores/gameStore";
 
-const EMPTY_BATTLE_SUMMARY = "Р‘РѕСЏ РµС‰Рµ РЅРµ Р±С‹Р»Рѕ. РЎРѕР±РµСЂРё СЃС‚Р°СЂС‚РѕРІС‹Р№ РѕС‚СЂСЏРґ Рё РїСЂРѕРІРµСЂСЊ С‚РµРјРї.";
+const EMPTY_BATTLE_SUMMARY = "Боя еще не было. Собери стартовый отряд и проверь темп.";
 const BATTLEFIELD_BACKGROUND = require("../../assets/backgrounds/20260429_191654.jpeg");
 
 interface SlotRect {
@@ -43,6 +43,14 @@ export function GameScreen() {
     y: number;
   } | null>(null);
   const [topBarHint, setTopBarHint] = useState<TopBarStatKey | null>(null);
+
+  useEffect(() => {
+    if (state.phase !== "endTurn") {
+      return;
+    }
+    const timer = setTimeout(() => state.advanceEndTurn(), 1500);
+    return () => clearTimeout(timer);
+  }, [state.phase, state.endTurnStepIndex, state.advanceEndTurn]);
 
   const profileKey = getHeroViewportProfile(width, height);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
@@ -159,24 +167,24 @@ export function GameScreen() {
 
   const hintContent: Record<TopBarStatKey, { title: string; text: string }> = {
     gold: {
-      title: "Р—РѕР»РѕС‚Рѕ",
-      text: "РўСЂР°С‚РёС‚СЃСЏ РЅР° РґРµР№СЃС‚РІРёСЏ РІ РјР°РіР°Р·РёРЅРµ: РїРѕРєСѓРїРєР° СЋРЅРёС‚Р° СЃС‚РѕРёС‚ 3, СЂРµСЂРѕР»Р» СЃС‚РѕРёС‚ 1. Р’ РЅР°С‡Р°Р»Рµ РєР°Р¶РґРѕРіРѕ С…РѕРґР° Р·РѕР»РѕС‚Рѕ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ.",
+      title: "Золото",
+      text: "Тратится на действия в магазине: покупка юнита стоит 3, реролл стоит 1. В начале каждого хода золото обновляется.",
     },
     lives: {
-      title: "Р–РёР·РЅРё",
-      text: "Р­С‚Рѕ Р·Р°РїР°СЃ РїРѕСЂР°Р¶РµРЅРёР№. РџСЂРѕРёРіСЂР°Р» Р±РѕР№ вЂ” С‚РµСЂСЏРµС€СЊ 1 Р¶РёР·РЅСЊ. РљРѕРіРґР° Р¶РёР·РЅРё Р·Р°РєР°РЅС‡РёРІР°СЋС‚СЃСЏ, Р·Р°Р±РµРі РїСЂРѕРёРіСЂР°РЅ.",
+      title: "Жизни",
+      text: "Это запас поражений. Проиграл бой — теряешь 1 жизнь. Когда жизни заканчиваются, забег проигран.",
     },
     turn: {
-      title: "РҐРѕРґ",
-      text: "РќРѕРјРµСЂ С‚РµРєСѓС‰РµРіРѕ СЂР°СѓРЅРґР°. РЎ СЂРѕСЃС‚РѕРј С…РѕРґР° РѕС‚РєСЂС‹РІР°СЋС‚СЃСЏ Р±РѕР»РµРµ СЃРёР»СЊРЅС‹Рµ С‚РёСЂС‹ СЋРЅРёС‚РѕРІ РІ РјР°РіР°Р·РёРЅРµ.",
+      title: "Ход",
+      text: "Номер текущего раунда. С ростом хода открываются более сильные тиры юнитов в магазине.",
     },
     wins: {
-      title: "РџРѕР±РµРґС‹",
-      text: "РЎРєРѕР»СЊРєРѕ Р±РѕС‘РІ С‚С‹ РІС‹РёРіСЂР°Р» РІ СЌС‚РѕРј Р·Р°Р±РµРіРµ. Р¦РµР»СЊ MVP-СЂРµР¶РёРјР° вЂ” РґРѕР№С‚Рё РґРѕ 10 РїРѕР±РµРґ.",
+      title: "Победы",
+      text: "Сколько боёв ты выиграл в этом забеге. Цель MVP-режима — дойти до 10 побед.",
     },
     tier: {
-      title: "РўРёСЂ РјР°РіР°Р·РёРЅР°",
-      text: "РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ С‚РёСЂ СЋРЅРёС‚РѕРІ, РєРѕС‚РѕСЂС‹Р№ РјРѕР¶РµС‚ РїРѕСЏРІРёС‚СЊСЃСЏ РІ РјР°РіР°Р·РёРЅРµ РЅР° С‚РµРєСѓС‰РµРј С…РѕРґСѓ.",
+      title: "Тир магазина",
+      text: "Максимальный тир юнитов, который может появиться в магазине на текущем ходу.",
     },
   };
 
@@ -256,7 +264,8 @@ export function GameScreen() {
           onTouchDragMove={handleTouchDragMove}
           onTouchDragEnd={handleTouchDragEnd}
         />
-      </View>`r`n
+      </View>
+
       <View style={[styles.actionBarWrap, compact && styles.actionBarWrapCompact, ultraCompact && styles.actionBarWrapUltraCompact]}>
         <ActionBar
           onRoll={state.rollShop}

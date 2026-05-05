@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 
 import { SpriteIcon } from "../ui/SpriteIcon";
+import { useFlashOnChange } from "../ui/useFlashOnChange";
 
 export type TopBarStatKey = "gold" | "lives" | "turn" | "wins" | "tier";
 
@@ -37,10 +38,17 @@ function Stat({
   compact?: boolean;
   onPress?: (stat: TopBarStatKey) => void;
 }) {
+  const { scale, glow } = useFlashOnChange(value);
+
   return (
     <Pressable style={[styles.card, compact && styles.cardCompact]} onPress={() => onPress?.(icon)}>
+      <Animated.View pointerEvents="none" style={[styles.flashOverlay, { opacity: glow }]} />
       <SpriteIcon icon={icon} size={compact ? 28 : 40} />
-      <Text style={[styles.value, compact && styles.valueCompact]}>{value}</Text>
+      <Animated.Text
+        style={[styles.value, compact && styles.valueCompact, { transform: [{ scale }] }]}
+      >
+        {value}
+      </Animated.Text>
     </Pressable>
   );
 }
@@ -65,6 +73,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.18,
     shadowRadius: 6,
@@ -76,6 +85,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     borderRadius: 9,
     borderWidth: 2,
+  },
+  flashOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 215, 70, 0.55)",
   },
   value: {
     color: "#111111",

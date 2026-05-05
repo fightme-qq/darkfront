@@ -15,6 +15,7 @@ import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/hero
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
+import { useFlashOnChange } from "../ui/useFlashOnChange";
 
 const webInteractiveStyle =
   Platform.OS === "web"
@@ -75,6 +76,11 @@ export function UnitCard({
       );
     }
 
+    const tempAtk = (unit as Partial<UnitInstance>).temporaryAttack ?? 0;
+    const tempHp = (unit as Partial<UnitInstance>).temporaryHealth ?? 0;
+    const teamDisplayAttack = unit.attack + tempAtk;
+    const teamDisplayHealth = unit.health + tempHp;
+
     return (
       <Pressable
         onPress={onPress}
@@ -97,7 +103,14 @@ export function UnitCard({
           offsetY={tuning?.offsetY ?? 0}
           scale={tuning?.scale ?? 1}
         />
-        <StatsRow attack={unit.attack} health={unit.health} compact={compact} config={statsConfig} />
+        <StatsRow
+          attack={teamDisplayAttack}
+          health={teamDisplayHealth}
+          tempAttack={tempAtk}
+          tempHealth={tempHp}
+          compact={compact}
+          config={statsConfig}
+        />
       </Pressable>
     );
   }
@@ -205,18 +218,22 @@ function HeroSprite({
 function StatsRow({
   attack,
   health,
+  tempAttack = 0,
+  tempHealth = 0,
   compact,
   config,
 }: {
   attack: number;
   health: number;
+  tempAttack?: number;
+  tempHealth?: number;
   compact?: boolean;
   config: { marginTop: number; gap: number };
 }) {
   return (
     <View style={[styles.statsRow, { marginTop: config.marginTop, gap: config.gap }]}>
-      <StatBadge icon="attack" value={attack} compact={compact} />
-      <StatBadge icon="health" value={health} compact={compact} />
+      <StatBadge icon="attack" value={attack} compact={compact} highlightOnMount={tempAttack > 0} />
+      <StatBadge icon="health" value={health} compact={compact} highlightOnMount={tempHealth > 0} />
     </View>
   );
 }
@@ -225,15 +242,41 @@ function StatBadge({
   icon,
   value,
   compact,
+  highlightOnMount,
 }: {
   icon: "attack" | "health";
   value: number;
   compact?: boolean;
+  highlightOnMount?: boolean;
 }) {
+  const { scale, glow } = useFlashOnChange(value, highlightOnMount);
+
   return (
     <View style={[styles.statBadge, compact && styles.statBadgeCompact]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.statGlow,
+          compact && styles.statGlowCompact,
+          {
+            opacity: glow,
+            transform: [
+              {
+                scale: glow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1.4],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <SpriteIcon icon={icon} size={compact ? 26 : 34} trim={1} />
-      <Text style={[styles.statValue, compact && styles.statValueCompact]}>{value}</Text>
+      <Animated.Text
+        style={[styles.statValue, compact && styles.statValueCompact, { transform: [{ scale }] }]}
+      >
+        {value}
+      </Animated.Text>
     </View>
   );
 }
@@ -465,6 +508,18 @@ const styles = StyleSheet.create({
   statBadgeCompact: {
     width: 26,
     height: 26,
+  },
+  statGlow: {
+    position: "absolute",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 215, 70, 0.85)",
+  },
+  statGlowCompact: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   statValue: {
     position: "absolute",

@@ -1,9 +1,10 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { getUnitSprite } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
+import { useFlashOnChange } from "../ui/useFlashOnChange";
 
 interface InfoPanelProps {
   selected: UnitInstance | ShopSlot | null;
@@ -16,6 +17,10 @@ interface InfoPanelProps {
 export function InfoPanel({ selected, battleSummary, onSellSelected, compact, style }: InfoPanelProps) {
   const unit = selected ? ("unit" in selected ? selected.unit : selected) : null;
   const canSell = Boolean(onSellSelected && selected && !("unit" in selected));
+  const tempAtk = unit ? (unit as Partial<UnitInstance>).temporaryAttack ?? 0 : 0;
+  const tempHp = unit ? (unit as Partial<UnitInstance>).temporaryHealth ?? 0 : 0;
+  const displayAttack = unit ? unit.attack + tempAtk : 0;
+  const displayHealth = unit ? unit.health + tempHp : 0;
 
   return (
     <View style={[styles.panel, compact && styles.panelCompact, style]}>
@@ -33,11 +38,11 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
                 <Text style={[styles.meta, compact && styles.metaCompact]}>T{unit.tier}</Text>
                 <View style={styles.metaStat}>
                   <SpriteIcon icon="attack" size={compact ? 20 : 26} />
-                  <Text style={[styles.meta, compact && styles.metaCompact]}>{unit.attack}</Text>
+                  <FlashingMeta value={displayAttack} compact={compact} highlightOnMount={tempAtk > 0} />
                 </View>
                 <View style={styles.metaStat}>
                   <SpriteIcon icon="health" size={compact ? 20 : 26} />
-                  <Text style={[styles.meta, compact && styles.metaCompact]}>{unit.health}</Text>
+                  <FlashingMeta value={displayHealth} compact={compact} highlightOnMount={tempHp > 0} />
                 </View>
               </View>
             </View>
@@ -67,6 +72,45 @@ export function InfoPanel({ selected, battleSummary, onSellSelected, compact, st
       <View style={styles.divider} />
       <Text style={[styles.footerLabel, compact && styles.footerLabelCompact]}>Последний бой</Text>
       <Text style={[styles.footerText, compact && styles.footerTextCompact]}>{battleSummary}</Text>
+    </View>
+  );
+}
+
+function FlashingMeta({
+  value,
+  compact,
+  highlightOnMount,
+}: {
+  value: number;
+  compact?: boolean;
+  highlightOnMount?: boolean;
+}) {
+  const { scale, glow } = useFlashOnChange(value, highlightOnMount);
+  return (
+    <View style={styles.flashWrap}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.metaGlow,
+          compact && styles.metaGlowCompact,
+          {
+            opacity: glow,
+            transform: [
+              {
+                scale: glow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1.3],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.Text
+        style={[styles.meta, compact && styles.metaCompact, { transform: [{ scale }] }]}
+      >
+        {value}
+      </Animated.Text>
     </View>
   );
 }
@@ -113,6 +157,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+  },
+  flashWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  metaGlow: {
+    position: "absolute",
+    width: 28,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(255, 215, 70, 0.7)",
+  },
+  metaGlowCompact: {
+    width: 22,
+    height: 18,
+    borderRadius: 9,
   },
   portrait: {
     width: 58,

@@ -11,6 +11,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "weary-squire",
     tags: ["frontline"],
     ability: "Покупка: получает +1 атаку до конца хода.",
+    effects: [
+      { trigger: "buy", target: "self", action: { kind: "buffStats", attack: 1, temporary: true } },
+    ],
   },
   {
     id: "grave-acolyte",
@@ -22,6 +25,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "grave-acolyte",
     tags: ["faint", "support"],
     ability: "Смерть: ближайший союзник позади получает +1/+1.",
+    effects: [
+      { trigger: "faint", target: "nearestBehind", action: { kind: "buffStats", attack: 1, health: 1 } },
+    ],
   },
   {
     id: "runic-hound",
@@ -33,6 +39,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "runic-hound",
     tags: ["frontline"],
     ability: "Старт боя: получает +1 атаку.",
+    effects: [
+      { trigger: "startOfBattle", target: "self", action: { kind: "buffStats", attack: 1 } },
+    ],
   },
   {
     id: "skull-shieldbearer",
@@ -44,6 +53,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "skull-shieldbearer",
     tags: ["frontline", "support"],
     ability: "Конец хода: союзник впереди получает +1 здоровья.",
+    effects: [
+      { trigger: "endTurn", target: "frontAlly", action: { kind: "buffStats", health: 1 } },
+    ],
   },
   {
     id: "bone-wanderer",
@@ -55,6 +67,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "bone-wanderer",
     tags: ["economy", "faint"],
     ability: "Продажа: дает +1 золото в следующем ходу.",
+    effects: [
+      { trigger: "sell", target: "self", action: { kind: "addGoldNextTurn", amount: 1 } },
+    ],
   },
   {
     id: "dusk-swordsman",
@@ -66,6 +81,9 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "dusk-swordsman",
     tags: ["frontline", "scaling"],
     ability: "Нокаут: получает +1/+1.",
+    effects: [
+      { trigger: "knockOut", target: "self", action: { kind: "buffStats", attack: 1, health: 1 } },
+    ],
   },
   {
     id: "winged-drakeling",
@@ -77,5 +95,8 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
     spriteKey: "winged-drakeling",
     tags: ["summon", "frontline"],
     ability: "Старт боя: наносит 1 урон случайному врагу.",
+    effects: [
+      { trigger: "startOfBattle", target: "randomEnemy", action: { kind: "dealDamage", amount: 1 } },
+    ],
   },
 ];

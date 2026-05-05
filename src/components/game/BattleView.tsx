@@ -15,6 +15,7 @@ import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
 import type { BattlePlayback, BattleViewUnit } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
+import { useFlashOnChange } from "../ui/useFlashOnChange";
 
 const BATTLEFIELD_BACKGROUND = require("../../../assets/backgrounds/20260429_191654.jpeg");
 
@@ -27,10 +28,17 @@ interface BattleViewProps {
   onComplete: () => void;
 }
 
+type StepPhase = "idle" | "hit" | "resolve";
+
 export function BattleView({ playback, onComplete }: BattleViewProps) {
   const { width, height } = useWindowDimensions();
-  const [stepIndex, setStepIndex] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "hit" | "resolve">("idle");
+  const [stepState, setStepState] = useState<{ index: number; phase: StepPhase }>({
+    index: 0,
+    phase: "idle",
+  });
+  const { index: stepIndex, phase } = stepState;
+  const setPhase = (next: StepPhase) =>
+    setStepState((prev) => (prev.phase === next ? prev : { ...prev, phase: next }));
 
   const dash = useRef(new Animated.Value(0)).current;
   const playerDamageFloat = useRef(new Animated.Value(0)).current;
@@ -45,6 +53,7 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
   const enemyReflow = useRef(new Animated.Value(0)).current;
 
   const currentStep = playback.steps[Math.min(stepIndex, Math.max(playback.steps.length - 1, 0))];
+  const isFinished = playback.steps.length > 0 && stepIndex >= playback.steps.length;
 
   const playerFrontDied = useMemo(() => {
     if (!currentStep?.playerBefore[0]) {
@@ -69,25 +78,21 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
       return { player: [] as BattleViewUnit[], enemy: [] as BattleViewUnit[] };
     }
 
-    return phase === "resolve"
-      ? { player: currentStep.playerAfter, enemy: currentStep.enemyAfter }
-      : { player: currentStep.playerBefore, enemy: currentStep.enemyBefore };
-  }, [currentStep, phase]);
+    if (isFinished || phase === "resolve") {
+      return { player: currentStep.playerAfter, enemy: currentStep.enemyAfter };
+    }
 
-  const initialPlayerCount = playback.steps[0]?.playerBefore.length ?? visibleTeams.player.length;
-  const initialEnemyCount = playback.steps[0]?.enemyBefore.length ?? visibleTeams.enemy.length;
-  const maxLineCount = Math.max(1, initialPlayerCount, initialEnemyCount);
-  const speed = 1.3;
+    return { player: currentStep.playerBefore, enemy: currentStep.enemyBefore };
+  }, [currentStep, phase, isFinished]);
+
+  const isSob = currentStep?.kind === "sob";
+  const speed = isSob ? 0.7 : 1.3;
   const profileKey = getHeroViewportProfile(width, height);
   const profile = HERO_LAYOUT_CONFIG.profiles[profileKey];
   const teamLaneTop = profile.lanes.team.top;
   const teamLaneHeight = profile.lanes.team.height;
-  const teamLaneLeft = profile.lanes.team.left;
-  const teamLaneRight = profile.lanes.team.right;
   const teamLaneTopPx = height * parsePercent(teamLaneTop);
   const teamLaneHeightPx = height * parsePercent(teamLaneHeight);
-  const teamLaneLeftPx = width * parsePercent(teamLaneLeft);
-  const teamLaneRightPx = width * parsePercent(teamLaneRight);
   const baseTokenWidth = profile.tokens.team.width;
   const baseTokenHeight = profile.tokens.team.minHeight;
   const baseStageHeight = profile.tokens.team.stageHeight;
@@ -104,8 +109,7 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
   const baselineBottom = baseBaselineBottom;
   const spriteSize = baseImageSize;
   const tokenMarginTop = baseMarginTop;
-  const dashDistance = Math.max(12, Math.min(30, tokenWidth * 0.34));
-  const fixedLaneWidth = tokenWidth * maxLineCount + slotGap * (maxLineCount - 1);
+  const dashDistance = isSob ? 0 : Math.max(12, Math.min(30, tokenWidth * 0.34));
 
   useEffect(() => {
     if (playback.steps.length === 0) {
@@ -239,7 +243,9 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
       }).start();
     }, Math.round(560 * speed));
 
-    const advanceTimer = setTimeout(() => setStepIndex((value) => value + 1), Math.round(840 * speed));
+    const advanceTimer = setTimeout(() => {
+      setStepState((prev) => ({ index: prev.index + 1, phase: "idle" }));
+    }, Math.round(840 * speed));
 
     return () => {
       clearTimeout(engageTimer);
@@ -292,8 +298,6 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
           {
             top: teamLaneTopPx,
             height: teamLaneHeightPx,
-            left: teamLaneLeftPx,
-            right: teamLaneRightPx,
           },
         ]}
       >
@@ -303,6 +307,8 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
           frontDashX={playerDashX}
           frontDeathY={playerDeathY}
           frontDeathOpacity={playerDeathOpacity}
+          applyFrontDash={phase === "hit"}
+          applyFrontDying={phase === "hit" && playerFrontDied}
           tokenWidth={tokenWidth}
           spriteSize={spriteSize}
           tokenHeight={tokenHeight}
@@ -313,16 +319,36 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
           statsGap={statsGap}
           statsMarginTop={statsMarginTop}
           reflow={playerReflow}
-          laneWidth={fixedLaneWidth}
         />
 
-        <View style={[styles.clashCenter, { marginBottom: Math.max(18, height * 0.03) }]}>
-          {phase === "hit" ? <View style={styles.impactFlash} /> : null}
+        <TeamLine
+          units={visibleTeams.enemy}
+          side="right"
+          mirrored
+          frontDashX={enemyDashX}
+          frontDeathY={enemyDeathY}
+          frontDeathOpacity={enemyDeathOpacity}
+          applyFrontDash={phase === "hit"}
+          applyFrontDying={phase === "hit" && enemyFrontDied}
+          tokenWidth={tokenWidth}
+          spriteSize={spriteSize}
+          tokenHeight={tokenHeight}
+          stageHeight={stageHeight}
+          baselineBottom={baselineBottom}
+          tokenMarginTop={tokenMarginTop}
+          slotGap={slotGap}
+          statsGap={statsGap}
+          statsMarginTop={statsMarginTop}
+          reflow={enemyReflow}
+        />
+
+        <View pointerEvents="none" style={styles.clashCenter}>
+          {phase === "hit" && !isSob ? <View style={styles.impactFlash} /> : null}
           <Text style={styles.stepText}>
             {Math.min(stepIndex + 1, Math.max(playback.steps.length, 1))}/{Math.max(playback.steps.length, 1)}
           </Text>
 
-          {currentStep && playerFront ? (
+          {currentStep && playerFront && !isSob ? (
             <Animated.Text
               style={[
                 styles.damageText,
@@ -334,7 +360,7 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
             </Animated.Text>
           ) : null}
 
-          {currentStep && enemyFront ? (
+          {currentStep && enemyFront && !isSob ? (
             <Animated.Text
               style={[
                 styles.damageText,
@@ -346,26 +372,6 @@ export function BattleView({ playback, onComplete }: BattleViewProps) {
             </Animated.Text>
           ) : null}
         </View>
-
-        <TeamLine
-          units={visibleTeams.enemy}
-          side="right"
-          mirrored
-          frontDashX={enemyDashX}
-          frontDeathY={enemyDeathY}
-          frontDeathOpacity={enemyDeathOpacity}
-          tokenWidth={tokenWidth}
-          spriteSize={spriteSize}
-          tokenHeight={tokenHeight}
-          stageHeight={stageHeight}
-          baselineBottom={baselineBottom}
-          tokenMarginTop={tokenMarginTop}
-          slotGap={slotGap}
-          statsGap={statsGap}
-          statsMarginTop={statsMarginTop}
-          reflow={enemyReflow}
-          laneWidth={fixedLaneWidth}
-        />
       </View>
 
       <View style={styles.footer}>
@@ -382,6 +388,8 @@ function TeamLine({
   frontDashX,
   frontDeathY,
   frontDeathOpacity,
+  applyFrontDash,
+  applyFrontDying,
   tokenWidth,
   spriteSize,
   tokenHeight,
@@ -392,7 +400,6 @@ function TeamLine({
   statsGap,
   statsMarginTop,
   reflow,
-  laneWidth,
 }: {
   units: BattleViewUnit[];
   side: "left" | "right";
@@ -400,6 +407,8 @@ function TeamLine({
   frontDashX: Animated.AnimatedInterpolation<number>;
   frontDeathY: Animated.AnimatedInterpolation<number>;
   frontDeathOpacity: Animated.Value;
+  applyFrontDash: boolean;
+  applyFrontDying: boolean;
   tokenWidth: number;
   spriteSize: number;
   tokenHeight: number;
@@ -410,19 +419,17 @@ function TeamLine({
   statsGap: number;
   statsMarginTop: number;
   reflow: Animated.Value;
-  laneWidth: number;
 }) {
   const reflowDistance = tokenWidth + slotGap;
   const reflowX =
     side === "left"
-      ? reflow.interpolate({ inputRange: [0, 1], outputRange: [0, reflowDistance] })
-      : reflow.interpolate({ inputRange: [0, 1], outputRange: [0, -reflowDistance] });
+      ? reflow.interpolate({ inputRange: [0, 1], outputRange: [0, -reflowDistance] })
+      : reflow.interpolate({ inputRange: [0, 1], outputRange: [0, reflowDistance] });
 
   return (
     <Animated.View
       style={[
         styles.teamCol,
-        { width: laneWidth },
         side === "left" ? styles.teamColLeft : styles.teamColRight,
         { transform: [{ translateX: reflowX }] },
       ]}
@@ -438,18 +445,25 @@ function TeamLine({
           const isFront = index === 0;
           const tuning = getUnitSpriteTuning(unit.spriteKey);
 
+          let frontStyle: object | null = null;
+          if (isFront) {
+            if (applyFrontDying) {
+              frontStyle = {
+                transform: [{ translateX: frontDashX }, { translateY: frontDeathY }],
+                opacity: frontDeathOpacity,
+              };
+            } else if (applyFrontDash) {
+              frontStyle = { transform: [{ translateX: frontDashX }] };
+            }
+          }
+
           return (
             <Animated.View
               key={unit.instanceId}
               style={[
                 styles.tokenWrap,
                 { width: tokenWidth, minHeight: tokenHeight, marginTop: tokenMarginTop },
-                isFront
-                  ? {
-                      transform: [{ translateX: frontDashX }, { translateY: frontDeathY }],
-                      opacity: frontDeathOpacity,
-                    }
-                  : null,
+                frontStyle,
               ]}
             >
               <View style={[styles.spriteBody, { height: stageHeight }]}>
@@ -486,10 +500,28 @@ function TeamLine({
 }
 
 function StatBadge({ icon, value }: { icon: "attack" | "health"; value: number }) {
+  const { scale, glow } = useFlashOnChange(value);
   return (
     <View style={styles.statBadge}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.statGlow,
+          {
+            opacity: glow,
+            transform: [
+              {
+                scale: glow.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1.3],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <SpriteIcon icon={icon} size={26} />
-      <Text style={styles.statText}>{value}</Text>
+      <Animated.Text style={[styles.statText, { transform: [{ scale }] }]}>{value}</Animated.Text>
     </View>
   );
 }
@@ -538,15 +570,14 @@ const styles = StyleSheet.create({
   },
   arena: {
     position: "absolute",
+    left: 0,
+    right: 0,
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "center",
-    paddingHorizontal: 0,
-    paddingBottom: 0,
-    paddingTop: 0,
     overflow: "visible",
   },
   teamCol: {
+    flex: 1,
     justifyContent: "flex-end",
     overflow: "visible",
   },
@@ -592,6 +623,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  statGlow: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 215, 70, 0.85)",
+  },
   statText: {
     position: "absolute",
     color: "#fff",
@@ -604,10 +642,11 @@ const styles = StyleSheet.create({
   clashCenter: {
     position: "absolute",
     left: "50%",
+    bottom: 0,
     width: 56,
     marginLeft: -28,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
     zIndex: 8,
   },
   impactFlash: {
