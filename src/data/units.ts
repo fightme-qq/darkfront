@@ -99,4 +99,35 @@ export const UNIT_BLUEPRINTS: UnitBlueprint[] = [
       { trigger: "startOfBattle", target: "randomEnemy", action: { kind: "dealDamage", amount: 1 } },
     ],
   },
+  {
+    id: "spider-matriarch",
+    name: "Паучиха-матриарх",
+    tier: 3,
+    attack: 3,
+    health: 3,
+    accent: "#b58cff",
+    spriteKey: "spider-matriarch",
+    tags: ["summon", "faint"],
+    ability: "Смерть: призывает двух Паучков 1/1 на свое место.",
+    effects: [
+      {
+        trigger: "faint",
+        target: "self",
+        action: {
+          kind: "summonUnits",
+          count: 2,
+          unit: {
+            blueprintId: "spiderling",
+            name: "Паучок",
+            tier: 1,
+            attack: 1,
+            health: 1,
+            spriteKey: "spiderling",
+            ability: "Призванный паучок 1/1.",
+            effects: [],
+          },
+        },
+      },
+    ],
+  },
 ];

@@ -3,6 +3,8 @@ import { ImageBackground, Pressable, StyleSheet, Text, useWindowDimensions, View
 import type { ViewStyle } from "react-native";
 
 import { ActionBar } from "../components/game/ActionBar";
+import type { ActionBarContextAction } from "../components/game/ActionBar";
+import { AdminPanel } from "../components/game/AdminPanel";
 import { BattleView } from "../components/game/BattleView";
 import { InfoPanel } from "../components/game/InfoPanel";
 import { ShopRow } from "../components/game/ShopRow";
@@ -33,6 +35,12 @@ export function GameScreen() {
   const selectedShopIndex = state.shop.findIndex((slot) => slot.slotId === state.selectedId && slot.unit);
   const selectedNotes = selectedTeam ? formatEffectNotes(state.effectNotesByUnitId[selectedTeam.instanceId]) : [];
   const canFreeze = selectedShopIndex >= 0;
+  const canSell = selectedIndex >= 0;
+  const contextAction: ActionBarContextAction = canSell
+    ? { kind: "sell" as const, enabled: true }
+    : canFreeze
+      ? { kind: "freeze" as const, enabled: true }
+      : { kind: "none", enabled: false };
   const showPlacementHints = selectedShopIndex >= 0;
   const [slotRects, setSlotRects] = useState<Record<number, SlotRect>>({});
   const [dragState, setDragState] = useState<{
@@ -132,6 +140,12 @@ export function GameScreen() {
 
     if (slot && targetIndex !== null && !state.team[targetIndex]) {
       state.buyUnitToSlot(shopIndex, targetIndex);
+    } else if (
+      slot?.unit &&
+      targetIndex !== null &&
+      state.team[targetIndex]?.blueprintId === slot.unit.id
+    ) {
+      state.mergeShopUnitIntoTeam(shopIndex, targetIndex);
     }
 
     setDragState(null);
@@ -160,7 +174,13 @@ export function GameScreen() {
   const handleTeamDragEnd = (teamIndex: number, x: number, y: number) => {
     const targetIndex = findSlotIndexAtPoint(x, y, slotRects);
     if (targetIndex !== null && targetIndex !== teamIndex) {
-      state.moveUnit(teamIndex, targetIndex);
+      const source = state.team[teamIndex];
+      const target = state.team[targetIndex];
+      if (source && target && source.blueprintId === target.blueprintId) {
+        state.mergeTeamUnitIntoTeam(teamIndex, targetIndex);
+      } else {
+        state.moveUnit(teamIndex, targetIndex);
+      }
     }
     setDragState(null);
   };
@@ -208,6 +228,17 @@ export function GameScreen() {
         />
       </View>
 
+      <View style={[styles.adminPanelWrap, compact && styles.adminPanelWrapCompact, ultraCompact && styles.adminPanelWrapUltraCompact]}>
+        <AdminPanel
+          compact={compact}
+          onGoldMax={() => state.adminSetGold(99)}
+          onAddGold={() => state.adminAddGold(10)}
+          onNextTurn={() => state.adminSetTurn(state.turn + 1)}
+          onTier3={() => state.adminSetShopTier(3)}
+          onReroll={state.adminRerollShop}
+        />
+      </View>
+
       {topBarHint ? (
         <Pressable style={styles.hintBackdrop} onPress={() => setTopBarHint(null)}>
           <Pressable style={[styles.hintCard, compact && styles.hintCardCompact]} onPress={() => undefined}>
@@ -220,7 +251,6 @@ export function GameScreen() {
       <InfoPanel
         selected={selected}
         notes={selectedNotes}
-        onSellSelected={selectedIndex >= 0 ? () => state.sellUnit(selectedIndex) : undefined}
         compact={compact}
         style={infoPanelStyle}
       />
@@ -235,8 +265,10 @@ export function GameScreen() {
           team={state.team}
           selectedId={state.selectedId}
           selectedTeamIndex={selectedIndex}
+          selectedShopUnitId={selectedShop?.unit?.id ?? null}
           onSelect={state.selectEntity}
           onDropShopToSlot={state.buyUnitToSlot}
+          onMergeShopToSlot={state.mergeShopUnitIntoTeam}
           onMoveUnit={state.moveUnit}
           compact={compact}
           showPlacementHints={showPlacementHints}
@@ -269,9 +301,17 @@ export function GameScreen() {
       <View style={[styles.actionBarWrap, compact && styles.actionBarWrapCompact, ultraCompact && styles.actionBarWrapUltraCompact]}>
         <ActionBar
           onRoll={state.rollShop}
-          onFreeze={canFreeze ? () => state.toggleFreeze(selectedShopIndex) : () => undefined}
+          onContextAction={() => {
+            if (canSell) {
+              state.sellUnit(selectedIndex);
+              return;
+            }
+            if (canFreeze) {
+              state.toggleFreeze(selectedShopIndex);
+            }
+          }}
           onBattle={state.startBattle}
-          canFreeze={canFreeze}
+          contextAction={contextAction}
           compact={compact}
         />
       </View>
@@ -357,6 +397,20 @@ const styles = StyleSheet.create({
   topBarWrapUltraCompact: {
     top: "1.8%",
     left: "1.3%",
+  },
+  adminPanelWrap: {
+    position: "absolute",
+    top: "13%",
+    left: "1.7%",
+    zIndex: 5,
+  },
+  adminPanelWrapCompact: {
+    top: "13.5%",
+    left: "1.3%",
+  },
+  adminPanelWrapUltraCompact: {
+    top: "12.8%",
+    left: "1%",
   },
   hintBackdrop: {
     ...StyleSheet.absoluteFillObject,

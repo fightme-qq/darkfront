@@ -16,8 +16,10 @@ interface TeamBoardProps {
   team: Array<UnitInstance | null>;
   selectedId: string | null;
   selectedTeamIndex?: number;
+  selectedShopUnitId?: string | null;
   onSelect: (id: string | null) => void;
   onDropShopToSlot?: (shopIndex: number, teamIndex: number) => void;
+  onMergeShopToSlot?: (shopIndex: number, teamIndex: number) => void;
   onMoveUnit?: (fromIndex: number, toIndex: number) => void;
   compact?: boolean;
   showPlacementHints?: boolean;
@@ -33,8 +35,10 @@ export function TeamBoard({
   team,
   selectedId,
   selectedTeamIndex,
+  selectedShopUnitId,
   onSelect,
   onDropShopToSlot,
+  onMergeShopToSlot,
   onMoveUnit,
   compact,
   showPlacementHints,
@@ -93,10 +97,12 @@ export function TeamBoard({
           selected={unit?.instanceId === selectedId}
           compact={compact}
           selectedShopIndex={selectedShopIndex}
+          selectedShopUnitId={selectedShopUnitId}
           showPlacementHint={!unit && Boolean(showPlacementHints)}
           dropActive={hoveredSlotIndex === index}
           onSelect={onSelect}
           onDropShopToSlot={onDropShopToSlot}
+          onMergeShopToSlot={onMergeShopToSlot}
           onSlotMeasure={measureSlot}
           slotRef={(node) => {
             slotRefs.current[index] = node;
@@ -118,10 +124,12 @@ interface TeamSlotProps {
   selected: boolean;
   compact?: boolean;
   selectedShopIndex?: number;
+  selectedShopUnitId?: string | null;
   showPlacementHint?: boolean;
   dropActive?: boolean;
   onSelect: (id: string | null) => void;
   onDropShopToSlot?: (shopIndex: number, teamIndex: number) => void;
+  onMergeShopToSlot?: (shopIndex: number, teamIndex: number) => void;
   onSlotMeasure: (index: number) => void;
   slotRef: (node: View | null) => void;
   onTeamDragStart?: (teamIndex: number, x: number, y: number) => void;
@@ -137,10 +145,12 @@ function TeamSlot({
   selected,
   compact,
   selectedShopIndex,
+  selectedShopUnitId,
   showPlacementHint,
   dropActive,
   onSelect,
   onDropShopToSlot,
+  onMergeShopToSlot,
   onSlotMeasure,
   slotRef,
   onTeamDragStart,
@@ -180,8 +190,6 @@ function TeamSlot({
         onPanResponderRelease: (event) => {
           if (draggingRef.current) {
             onTeamDragEnd?.(index, event.nativeEvent.pageX, event.nativeEvent.pageY);
-          } else if (!unit && selectedShopIndex !== undefined && selectedShopIndex >= 0) {
-            onDropShopToSlot?.(selectedShopIndex, index);
           } else {
             onSelect(unit?.instanceId ?? null);
           }
@@ -194,7 +202,7 @@ function TeamSlot({
           draggingRef.current = false;
         },
       }),
-    [index, onDropShopToSlot, onSelect, onTeamDragEnd, onTeamDragMove, onTeamDragStart, selectedShopIndex, unit],
+    [index, onDropShopToSlot, onMergeShopToSlot, onSelect, onTeamDragEnd, onTeamDragMove, onTeamDragStart, selectedShopIndex, selectedShopUnitId, unit],
   );
 
   return (
@@ -214,11 +222,6 @@ function TeamSlot({
         unit={unit}
         selected={selected}
         onPress={() => {
-          if (!unit && selectedShopIndex !== undefined && selectedShopIndex >= 0) {
-            onDropShopToSlot?.(selectedShopIndex, index);
-            return;
-          }
-
           onSelect(unit?.instanceId ?? null);
         }}
         compact={compact}

@@ -4,6 +4,7 @@ import { GAME_CONFIG } from "../constants/gameConfig";
 import { UNIT_BLUEPRINTS } from "../data/units";
 import { resolveBattlePlayback } from "../domain/battle";
 import { runEndTurnTriggersSteps, runShopTrigger, type EndTurnStep } from "../domain/effects";
+import { addMergeExperience } from "../domain/merge";
 import { createUnitInstanceId, getShopTier, rollShop } from "../domain/shop";
 import type { BattlePlayback, BattleResult, ShopSlot, UnitBlueprint, UnitInstance } from "../domain/types";
 
@@ -31,6 +32,8 @@ interface GameState {
   rollShop: () => void;
   buyUnit: (shopIndex: number) => void;
   buyUnitToSlot: (shopIndex: number, teamIndex: number) => void;
+  mergeShopUnitIntoTeam: (shopIndex: number, teamIndex: number) => void;
+  mergeTeamUnitIntoTeam: (fromIndex: number, toIndex: number) => void;
   moveUnit: (fromIndex: number, toIndex: number) => void;
   toggleFreeze: (shopIndex: number) => void;
   sellUnit: (teamIndex: number) => void;
@@ -38,6 +41,11 @@ interface GameState {
   startBattle: () => void;
   advanceEndTurn: () => void;
   finishBattle: () => void;
+  adminSetGold: (gold: number) => void;
+  adminAddGold: (amount: number) => void;
+  adminSetTurn: (turn: number) => void;
+  adminSetShopTier: (tier: number) => void;
+  adminRerollShop: () => void;
 }
 
 function createInstance(unit: UnitBlueprint, counter: number): UnitInstance {
@@ -131,7 +139,26 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
     const slot = state.shop[shopIndex];
-    if (!slot || !slot.unit || state.gold < GAME_CONFIG.buyCost || state.team[teamIndex]) {
+    const target = state.team[teamIndex];
+    if (!slot || !slot.unit || state.gold < GAME_CONFIG.buyCost) {
+      return;
+    }
+
+    if (target) {
+      if (target.blueprintId !== slot.unit.id) {
+        return;
+      }
+
+      const nextTeam = [...state.team];
+      nextTeam[teamIndex] = addMergeExperience(target);
+      const nextShop = [...state.shop];
+      nextShop[shopIndex] = { ...slot, unit: null, frozen: false };
+      set({
+        gold: state.gold - GAME_CONFIG.buyCost,
+        team: nextTeam,
+        shop: nextShop,
+        selectedId: nextTeam[teamIndex]?.instanceId ?? null,
+      });
       return;
     }
 
@@ -151,6 +178,30 @@ export const useGameStore = create<GameState>((set, get) => ({
       pendingGoldNextTurn: state.pendingGoldNextTurn + buyResult.pendingGoldDelta,
     });
   },
+  mergeShopUnitIntoTeam: (shopIndex, teamIndex) => {
+    const state = get();
+    if (state.phase !== "shop") {
+      return;
+    }
+
+    const slot = state.shop[shopIndex];
+    const target = state.team[teamIndex];
+    if (!slot?.unit || !target || slot.unit.id !== target.blueprintId || state.gold < GAME_CONFIG.buyCost) {
+      return;
+    }
+
+    const nextTeam = [...state.team];
+    nextTeam[teamIndex] = addMergeExperience(target);
+    const nextShop = [...state.shop];
+    nextShop[shopIndex] = { ...slot, unit: null, frozen: false };
+
+    set({
+      gold: state.gold - GAME_CONFIG.buyCost,
+      team: nextTeam,
+      shop: nextShop,
+      selectedId: nextTeam[teamIndex]?.instanceId ?? null,
+    });
+  },
   moveUnit: (fromIndex, toIndex) => {
     const state = get();
     if (state.phase !== "shop") {
@@ -168,6 +219,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     const nextTeam = [...state.team];
     nextTeam[fromIndex] = state.team[toIndex];
     nextTeam[toIndex] = fromUnit;
+
+    set({
+      team: nextTeam,
+      selectedId: nextTeam[toIndex]?.instanceId ?? null,
+    });
+  },
+  mergeTeamUnitIntoTeam: (fromIndex, toIndex) => {
+    const state = get();
+    if (state.phase !== "shop" || fromIndex === toIndex) {
+      return;
+    }
+
+    const source = state.team[fromIndex];
+    const target = state.team[toIndex];
+    if (!source || !target || source.blueprintId !== target.blueprintId) {
+      return;
+    }
+
+    const nextTeam = [...state.team];
+    nextTeam[toIndex] = addMergeExperience(target);
+    nextTeam[fromIndex] = null;
 
     set({
       team: nextTeam,
@@ -296,6 +368,53 @@ export const useGameStore = create<GameState>((set, get) => ({
       shopSlotCounter: rerolled.slotIdCounter,
       team: resetTeam,
       pendingGoldNextTurn: 0,
+    });
+  },
+  adminSetGold: (gold) => {
+    const state = get();
+    if (state.phase !== "shop") return;
+    set({ gold: Math.max(0, Math.min(999, gold)) });
+  },
+  adminAddGold: (amount) => {
+    const state = get();
+    if (state.phase !== "shop") return;
+    set({ gold: Math.max(0, Math.min(999, state.gold + amount)) });
+  },
+  adminSetTurn: (turn) => {
+    const state = get();
+    if (state.phase !== "shop") return;
+    const nextTurn = Math.max(1, turn);
+    const next = rollShop(state.seed, UNIT_BLUEPRINTS, nextTurn, state.shop, state.shopSlotCounter);
+    set({
+      turn: nextTurn,
+      shopTier: getShopTier(nextTurn),
+      seed: next.seed,
+      shop: next.slots,
+      shopSlotCounter: next.slotIdCounter,
+    });
+  },
+  adminSetShopTier: (tier) => {
+    const state = get();
+    if (state.phase !== "shop") return;
+    const nextTurn = tier <= 1 ? 1 : tier <= 2 ? 3 : 5;
+    const next = rollShop(state.seed, UNIT_BLUEPRINTS, nextTurn, state.shop, state.shopSlotCounter);
+    set({
+      turn: Math.max(state.turn, nextTurn),
+      shopTier: Math.max(1, tier),
+      seed: next.seed,
+      shop: next.slots,
+      shopSlotCounter: next.slotIdCounter,
+    });
+  },
+  adminRerollShop: () => {
+    const state = get();
+    if (state.phase !== "shop") return;
+    const next = rollShop(state.seed, UNIT_BLUEPRINTS, state.turn, state.shop, state.shopSlotCounter);
+    set({
+      seed: next.seed,
+      shop: next.slots,
+      shopSlotCounter: next.slotIdCounter,
+      shopTier: next.tier,
     });
   },
 }));

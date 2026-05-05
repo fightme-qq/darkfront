@@ -242,6 +242,20 @@ export const HERO_LAYOUT_CONFIG = {
       tierOffsetX: -2,
       tierOffsetY: 4,
     },
+    "spider-matriarch": {
+      scale: 0.82,
+      offsetX: 0,
+      offsetY: 6,
+      tierOffsetX: -4,
+      tierOffsetY: 4,
+    },
+    "spiderling": {
+      scale: 0.72,
+      offsetX: 0,
+      offsetY: 22,
+      tierOffsetX: -18,
+      tierOffsetY: 8,
+    },
     "weary-squire": {
       scale: 0.9,
       offsetX: 0,

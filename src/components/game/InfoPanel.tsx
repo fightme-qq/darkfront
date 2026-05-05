@@ -1,4 +1,4 @@
-import { Animated, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Image, StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 
 import { getUnitSprite } from "../../data/unitSprites";
@@ -9,14 +9,12 @@ import { useFlashOnChange } from "../ui/useFlashOnChange";
 interface InfoPanelProps {
   selected: UnitInstance | ShopSlot | BattleViewUnit | null;
   notes?: string[];
-  onSellSelected?: () => void;
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-export function InfoPanel({ selected, notes = [], onSellSelected, compact, style }: InfoPanelProps) {
+export function InfoPanel({ selected, notes = [], compact, style }: InfoPanelProps) {
   const unit = selected ? ("unit" in selected ? selected.unit : selected) : null;
-  const canSell = Boolean(onSellSelected && selected && !("unit" in selected));
   const tempAtk = unit ? (unit as Partial<UnitInstance>).temporaryAttack ?? 0 : 0;
   const tempHp = unit ? (unit as Partial<UnitInstance>).temporaryHealth ?? 0 : 0;
   const displayAttack = unit ? unit.attack + tempAtk : 0;
@@ -32,20 +30,18 @@ export function InfoPanel({ selected, notes = [], onSellSelected, compact, style
               style={[styles.portrait, compact && styles.portraitCompact]}
               resizeMode="contain"
             />
-            <View style={styles.headerTextCol}>
-              <Text
-                style={[styles.name, compact && styles.nameCompact]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.55}
-              >
-                {unit.name}
-              </Text>
-            </View>
             <View style={styles.tierCoin}>
               <Text style={[styles.tierCoinText, compact && styles.tierCoinTextCompact]}>{unit.tier}</Text>
             </View>
           </View>
+          <Text
+            style={[styles.name, compact && styles.nameCompact]}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {unit.name}
+          </Text>
 
           <View style={styles.metaRow}>
             <Text style={[styles.meta, compact && styles.metaCompact]}>T{unit.tier}</Text>
@@ -61,14 +57,6 @@ export function InfoPanel({ selected, notes = [], onSellSelected, compact, style
 
           <Text style={[styles.ability, compact && styles.abilityCompact]}>{unit.ability}</Text>
 
-          {canSell ? (
-            <Pressable style={[styles.sellButton, compact && styles.sellButtonCompact]} onPress={onSellSelected}>
-              <View style={styles.sellInner}>
-                <SpriteIcon icon="sell" size={compact ? 28 : 36} />
-                <Text style={[styles.sellText, compact && styles.sellTextCompact]}>Продать</Text>
-              </View>
-            </Pressable>
-          ) : null}
         </>
       ) : (
         <>
@@ -143,7 +131,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   panelCompact: {
-    width: 240,
+    width: 260,
     padding: 10,
     borderRadius: 14,
     borderWidth: 3,
@@ -151,12 +139,8 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
-  },
-  headerTextCol: {
-    flex: 1,
-    minWidth: 0,
-    gap: 4,
   },
   metaRow: {
     flexDirection: "row",
@@ -196,13 +180,16 @@ const styles = StyleSheet.create({
     height: 63,
   },
   name: {
+    marginTop: 3,
     color: "#da5d14",
     fontSize: 22,
+    lineHeight: 24,
     fontWeight: "900",
     textTransform: "uppercase",
   },
   nameCompact: {
-    fontSize: 15,
+    fontSize: 18,
+    lineHeight: 20,
   },
   tierCoin: {
     width: 38,
@@ -231,8 +218,8 @@ const styles = StyleSheet.create({
   },
   abilityCompact: {
     marginTop: 6,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
   },
   meta: {
     color: "#4b3119",
@@ -241,35 +228,6 @@ const styles = StyleSheet.create({
   },
   metaCompact: {
     fontSize: 9,
-  },
-  sellButton: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#19120c",
-    backgroundColor: "#ffd77d",
-  },
-  sellButtonCompact: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  sellInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  sellText: {
-    color: "#4d2b0c",
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  sellTextCompact: {
-    fontSize: 10,
   },
   divider: {
     height: 2,
@@ -291,7 +249,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   footerTextCompact: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 14,
   },
 });

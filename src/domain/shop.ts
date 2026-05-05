@@ -3,7 +3,7 @@ import type { ShopSlot, UnitBlueprint } from "./types";
 import { nextInt } from "./rng";
 
 export function getShopTier(turn: number) {
-  return Math.min(1 + Math.floor(turn / 2), 6);
+  return Math.min(1 + Math.floor(Math.max(0, turn - 1) / 2), 6);
 }
 
 export function createUnitInstanceId(counter: number) {

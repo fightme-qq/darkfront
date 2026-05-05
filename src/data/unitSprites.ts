@@ -7,6 +7,8 @@ export const UNIT_SPRITES: Record<CharacterSpriteKey, any> = {
   "dusk-swordsman": require("../../assets/characters/dusk-swordsman.png"),
   "runic-hound": require("../../assets/characters/runic-hound.png"),
   "skull-shieldbearer": require("../../assets/characters/skull-shieldbearer.png"),
+  "spider-matriarch": require("../../assets/characters/spider-matriarch.png"),
+  "spiderling": require("../../assets/characters/spiderling.png"),
   "weary-squire": require("../../assets/characters/weary-squire.png"),
   "winged-drakeling": require("../../assets/characters/winged-drakeling.png"),
 };

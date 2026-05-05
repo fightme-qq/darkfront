@@ -12,6 +12,8 @@ export type CharacterSpriteKey =
   | "dusk-swordsman"
   | "runic-hound"
   | "skull-shieldbearer"
+  | "spider-matriarch"
+  | "spiderling"
   | "weary-squire"
   | "winged-drakeling";
 
@@ -33,7 +35,21 @@ export type TargetSelector =
 export type EffectAction =
   | { kind: "buffStats"; attack?: number; health?: number; temporary?: boolean }
   | { kind: "dealDamage"; amount: number }
-  | { kind: "addGoldNextTurn"; amount: number };
+  | { kind: "addGoldNextTurn"; amount: number }
+  | {
+      kind: "summonUnits";
+      count: number;
+      unit: {
+        blueprintId: string;
+        name: string;
+        tier: number;
+        attack: number;
+        health: number;
+        spriteKey: CharacterSpriteKey;
+        ability: string;
+        effects?: UnitEffect[];
+      };
+    };
 
 export interface UnitEffect {
   trigger: TriggerType;

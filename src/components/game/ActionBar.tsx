@@ -1,16 +1,26 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { SpriteIcon } from "../ui/SpriteIcon";
+import type { UiIconKey } from "../../data/uiIcons";
+
+export type ActionBarContextAction =
+  | { kind: "freeze"; enabled: boolean }
+  | { kind: "sell"; enabled: boolean }
+  | { kind: "none"; enabled: false };
 
 interface ActionBarProps {
   onRoll: () => void;
-  onFreeze: () => void;
+  onContextAction: () => void;
   onBattle: () => void;
-  canFreeze: boolean;
+  contextAction: ActionBarContextAction;
   compact?: boolean;
 }
 
-export function ActionBar({ onRoll, onFreeze, onBattle, canFreeze, compact }: ActionBarProps) {
+export function ActionBar({ onRoll, onContextAction, onBattle, contextAction, compact }: ActionBarProps) {
+  const contextIcon: UiIconKey = contextAction.kind === "sell" ? "sell" : "freeze";
+  const contextLabel =
+    contextAction.kind === "sell" ? "Продать" : contextAction.kind === "freeze" ? "Заморозить" : "Выбери";
+
   return (
     <View style={[styles.row, compact && styles.rowCompact]}>
       <Pressable style={[styles.button, compact && styles.buttonCompact]} onPress={onRoll}>
@@ -20,12 +30,12 @@ export function ActionBar({ onRoll, onFreeze, onBattle, canFreeze, compact }: Ac
         </View>
       </Pressable>
       <Pressable
-        style={[styles.button, compact && styles.buttonCompact, !canFreeze && styles.buttonDisabled]}
-        onPress={onFreeze}
+        style={[styles.button, compact && styles.buttonCompact, !contextAction.enabled && styles.buttonDisabled]}
+        onPress={contextAction.enabled ? onContextAction : () => undefined}
       >
         <View style={styles.buttonInner}>
-          <SpriteIcon icon="freeze" size={compact ? 36 : 48} />
-          <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>Заморозить</Text>
+          <SpriteIcon icon={contextIcon} size={compact ? 36 : 48} />
+          <Text style={[styles.buttonText, compact && styles.buttonTextCompact]}>{contextLabel}</Text>
         </View>
       </Pressable>
       <Pressable style={[styles.button, styles.centerButton, compact && styles.buttonCompact]} onPress={onBattle}>

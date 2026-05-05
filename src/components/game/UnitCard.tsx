@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { getHeroViewportProfile, HERO_LAYOUT_CONFIG } from "../../constants/heroLayoutConfig";
+import { getLevelBadgeImage } from "../../data/levelBadges";
+import { getTierBadgeImage } from "../../data/tierBadges";
 import { getUnitSprite, getUnitSpriteTuning } from "../../data/unitSprites";
 import type { ShopSlot, UnitInstance } from "../../domain/types";
 import { SpriteIcon } from "../ui/SpriteIcon";
@@ -95,6 +97,11 @@ export function UnitCard({
         ]}
       >
         {selected ? <SelectionCorners compact={compact} /> : null}
+        <Image
+          source={getLevelBadgeImage(unit as UnitInstance)}
+          style={[styles.levelBadge, compact && styles.levelBadgeCompact]}
+          resizeMode="contain"
+        />
         <HeroSprite
           spriteKey={unit.spriteKey}
           compact={compact}
@@ -136,12 +143,12 @@ export function UnitCard({
       ]}
     >
       {selected ? <SelectionCorners compact={compact} /> : null}
-      <View
+      <Image
+        source={getTierBadgeImage(unit.tier)}
         style={[
-          styles.tierChip,
-          compact && styles.tierChipCompact,
+          styles.shopTierBadge,
+          compact && styles.shopTierBadgeCompact,
           {
-            backgroundColor: unit.accent,
             top: tierConfig.top,
             right: tierConfig.right,
             transform: [
@@ -150,9 +157,8 @@ export function UnitCard({
             ],
           },
         ]}
-      >
-        <Text style={[styles.tierChipText, compact && styles.tierChipTextCompact]}>{unit.tier}</Text>
-      </View>
+        resizeMode="contain"
+      />
       <HeroSprite
         spriteKey={unit.spriteKey}
         compact={compact}
@@ -383,6 +389,20 @@ const styles = StyleSheet.create({
   heroTokenFrozen: {
     opacity: 0.76,
   },
+  levelBadge: {
+    position: "absolute",
+    top: 0,
+    left: 4,
+    width: 54,
+    height: 34,
+    zIndex: 7,
+  },
+  levelBadgeCompact: {
+    top: 2,
+    left: 2,
+    width: 44,
+    height: 28,
+  },
   selectionOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 5,
@@ -432,28 +452,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  tierChip: {
+  shopTierBadge: {
     position: "absolute",
-    minWidth: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "#1f150e",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 58,
+    height: 34,
     zIndex: 6,
   },
-  tierChipCompact: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-  },
-  tierChipText: {
-    color: "#17120f",
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  tierChipTextCompact: {
-    fontSize: 10,
+  shopTierBadgeCompact: {
+    width: 46,
+    height: 27,
   },
 });

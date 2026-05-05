@@ -52,6 +52,8 @@ function applyShopAction(
       return { unit, goldDelta: action.amount };
     case "dealDamage":
       return { unit, goldDelta: 0 };
+    case "summonUnits":
+      return { unit, goldDelta: 0 };
     default:
       return { unit, goldDelta: 0 };
   }
@@ -263,9 +265,42 @@ function applyBattleAction(unit: BattleViewUnit, action: EffectAction): BattleVi
       return { ...unit, health: unit.health - action.amount };
     case "addGoldNextTurn":
       return unit;
+    case "summonUnits":
+      return unit;
     default:
       return unit;
   }
+}
+
+function createSummonedUnit(source: BattleViewUnit, action: Extract<EffectAction, { kind: "summonUnits" }>, index: number): BattleViewUnit {
+  return {
+    instanceId: `${source.instanceId}-summon-${index}`,
+    blueprintId: action.unit.blueprintId,
+    name: action.unit.name,
+    spriteKey: action.unit.spriteKey,
+    attack: action.unit.attack,
+    health: action.unit.health,
+    tier: action.unit.tier,
+    ability: action.unit.ability,
+    effects: action.unit.effects ?? [],
+  };
+}
+
+function summonUnitsAt(
+  side: Side,
+  position: number,
+  source: BattleViewUnit,
+  action: Extract<EffectAction, { kind: "summonUnits" }>,
+  snapshot: BattleSnapshot,
+): BattleSnapshot {
+  const team = side === "player" ? snapshot.player : snapshot.enemy;
+  const insertAt = Math.max(0, Math.min(position, team.length));
+  const summoned = Array.from({ length: action.count }, (_, index) => createSummonedUnit(source, action, index));
+  const nextTeam = [...team.slice(0, insertAt), ...summoned, ...team.slice(insertAt)];
+
+  return side === "player"
+    ? { ...snapshot, player: nextTeam }
+    : { ...snapshot, enemy: nextTeam };
 }
 
 function applyBattleEffectAt(
@@ -435,6 +470,11 @@ export function runFaintTrigger(
   let next = snapshot;
   for (const effect of faintedUnit.effects) {
     if (effect.trigger !== "faint") continue;
+    if (effect.action.kind === "summonUnits") {
+      next = summonUnitsAt(side, positionAtDeath, faintedUnit, effect.action, next);
+      continue;
+    }
+
     const targets = pickBattleTargets(side, positionAtDeath, effect.target, next);
     for (const target of targets) {
       next = applyBattleEffectAt(next, target, effect.action);

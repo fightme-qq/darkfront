@@ -6,6 +6,7 @@
 2. [docs/design/GDD-MVP.md](/g:/vs/auto pets/docs/design/GDD-MVP.md:1)
 3. [docs/architecture/CLAUDE.md](/g:/vs/auto pets/docs/architecture/CLAUDE.md:1)
 4. [docs/design/SAP-UNITS.md](/g:/vs/auto pets/docs/design/SAP-UNITS.md:1)
+5. [docs/design/ART-PROMPTS.md](/g:/vs/auto pets/docs/design/ART-PROMPTS.md:1), если задача касается генерации или правки визуальных ассетов
 
 ## Короткая инструкция для нового чата
 
@@ -24,6 +25,7 @@
 - что gameplay-логика должна уходить в domain, а не в UI
 - какие документы являются источником истины по дизайну и технике
 - что `docs/design/GDD-MVP.md` и `docs/design/SAP-UNITS.md` описывают продукт и контент
+- что `docs/design/ART-PROMPTS.md` описывает правила генерации юнит-спрайтов и UI-ассетов
 - что `docs/architecture/CLAUDE.md` описывает техническое направление реализации
 - что в `docs/architecture/CLAUDE.md` есть отдельный блок про `F2P architecture direction`
 - что после явного одобрения результата пользователем изменения нужно не только оставить локально, но и закоммитить/запушить в Git
